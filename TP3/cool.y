@@ -85,6 +85,10 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <expression> expression expression_let
 
 /* Precedence declarations go here. */
+%nonassoc LET1
+%nonassoc LET2
+%nonassoc LET3
+%nonassoc LET4
 %right ASSIGN
 %left NOT
 %nonassoc LE '<' '='
@@ -109,6 +113,12 @@ class_list
 	| class_list class	/* several classes */
 		{ $$ = append_Classes($1,single_Classes($2)); 
                   parse_results = $$; }
+
+  /* error handling */
+  | error
+    { yyclearin; }
+  | class_list error
+    { yyclearin; }
 	;
 
 /* If no parent is specified, the class inherits from the Object class. */
@@ -117,14 +127,6 @@ class	: CLASS TYPEID '{' feature_list '}' ';'
 			      stringtable.add_string(curr_filename)); }
 	| CLASS TYPEID INHERITS TYPEID '{' feature_list '}' ';'
 		{ $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); }
-
-  /* error handling */
-  | CLASS TYPEID '{' error '}' ';'
-    { yyclearin; }
-  | CLASS error '{' feature_list '}' ';'
-    { yyclearin; }
-  | CLASS error '{' error '}' ';'
-    { yyclearin; }
 	;
 
 /* Feature list may be empty, but no empty features in list. */
@@ -133,6 +135,10 @@ feature_list
 		{  $$ = nil_Features(); }
 	| feature_list feature	/* several features */
 		{ $$ = append_Features($1,single_Features($2)); }
+
+  /* error handling */
+  | feature_list error
+    { yyclearin; }
 	;
 
 feature
@@ -142,58 +148,6 @@ feature
     {  $$ = attr($1, $3, no_expr()); }
   | OBJECTID ':' TYPEID ASSIGN expression ';'
     {  $$ = attr($1, $3, $5); }
-
-  /* error handling */
-  | error '(' formal_list ')' ':' TYPEID '{' expression '}' ';'
-    { yyclearin; }
-  | OBJECTID '(' error ')' ':' TYPEID '{' expression '}' ';'
-    { yyclearin; }
-  | OBJECTID '(' formal_list ')' ':' error '{' expression '}' ';'
-    { yyclearin; }
-  | OBJECTID '(' formal_list ')' ':' TYPEID '{' error '}' ';'
-    { yyclearin; }
-  | error '(' error ')' ':' TYPEID '{' expression '}' ';'
-    { yyclearin; }
-  | error '(' formal_list ')' ':' error '{' expression '}' ';'
-    { yyclearin; }
-  | error '(' formal_list ')' ':' TYPEID '{' error '}' ';'
-    { yyclearin; }
-  | OBJECTID '(' error ')' ':' error '{' expression '}' ';'
-    { yyclearin; }
-  | OBJECTID '(' error ')' ':' TYPEID '{' error '}' ';'
-    { yyclearin; }
-  | OBJECTID '(' formal_list ')' ':' error '{' error '}' ';'
-    { yyclearin; }
-  | OBJECTID '(' error ')' ':' error '{' error '}' ';'
-    { yyclearin; }
-  | error '(' formal_list ')' ':' error '{' error '}' ';'
-    { yyclearin; }
-  | error '(' error ')' ':' TYPEID '{' error '}' ';'
-    { yyclearin; }
-  | error '(' error ')' ':' error '{' expression '}' ';'
-    { yyclearin; }
-  | error '(' error ')' ':' error '{' error '}' ';'
-    { yyclearin; }
-  | error ':' TYPEID ';'
-    { yyclearin; }
-  | OBJECTID ':' error ';'
-    { yyclearin; }
-  | error ':' error ';'
-    { yyclearin; }
-  | error ':' TYPEID ASSIGN expression ';'
-    { yyclearin; }
-  | OBJECTID ':' error ASSIGN expression ';'
-    { yyclearin; }
-  | OBJECTID ':' TYPEID ASSIGN error ';'
-    { yyclearin; }
-  | | error ':' error ASSIGN expression ';'
-    { yyclearin; }
-  | error ':' TYPEID ASSIGN error ';'
-    { yyclearin; }
-  | OBJECTID ':' error ASSIGN error ';'
-    { yyclearin; }
-  | error ':' error ASSIGN error ';'
-    { yyclearin; }
   ;
 
 formal_list
@@ -201,8 +155,8 @@ formal_list
 		{  $$ = nil_Formals(); }
   | formal /* single formal */
     { $$ = single_Formals($1); }
-	| feature_list ',' formal	/* several formals */
-		{ $$ = append_Formals($1,single_Formals($2)); }
+	| formal_list ',' formal	/* several formals */
+		{ $$ = append_Formals($1,single_Formals($3)); }
 	;
 
 formal
@@ -224,27 +178,23 @@ case
 
 expression_list_comma
   :				/* empty */
-		{  $$ = nil_Formals(); }
+		{  $$ = nil_Expressions(); }
   | expression /* single expression */
-    { $$ = single_Expression($1); }
+    { $$ = single_Expressions($1); }
 	| expression_list_comma ',' expression	/* several expressions */
-		{ $$ = append_Expressions($1,single_Expressions($2)); }
+		{ $$ = append_Expressions($1,single_Expressions($3)); }
 	;
 
 expression_list_semic
   :	expression /* single expression */
-    { $$ = single_Expression($1); }
+    { $$ = single_Expressions($1); }
 	| expression_list_semic ';' expression	/* several expressions */
-		{ $$ = append_Expressions($1,single_Expressions($2)); }
+		{ $$ = append_Expressions($1,single_Expressions($3)); }
 
   /* error handling */
   | error
     { yyclearin; }
-  | error ';' expression
-    { yyclearin; }
   | expression_list_semic ';' error
-    { yyclearin; }
-  | error ';' error
     { yyclearin; }
 	;
 
@@ -326,13 +276,13 @@ expression
   ;
 
 expression_let
-  : OBJECTID ':' TYPEID IN expression
+  : OBJECTID ':' TYPEID IN expression %prec LET1
     {$$ = let($1, $3, no_expr() ,$5); }
-  | OBJECTID ':' TYPEID ',' expression_let
+  | OBJECTID ':' TYPEID ',' expression_let %prec LET2
     {$$ = let($1, $3, no_expr(), $5);}
-  | OBJECTID ':' TYPEID ASSIGN expression IN expression
+  | OBJECTID ':' TYPEID ASSIGN expression IN expression %prec LET3
     {$$ = let($1, $3, $5, $7); }
-  | OBJECTID ':' TYPEID ASSIGN expression ',' expression_let
+  | OBJECTID ':' TYPEID ASSIGN expression ',' expression_let %prec LET4
     {$$ = let($1, $3, $5, $7); }
 
   /* error handling */
