@@ -9,13 +9,17 @@ class Point {
         }
     }
     movePoint2(newX: Int): Point {
-        x <- newX;
-        y <- 0;
-        self;
+        {
+            x <- newX;
+            y <- 0;
+            self;
+        }
     };
     movePoint3(): Point {
-        x <- 0;
-        y <- 0;
-        self
+        {
+            x <- 0
+            y <- 0;
+            self
+        }
     };
 };
