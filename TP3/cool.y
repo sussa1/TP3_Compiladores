@@ -85,6 +85,10 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <expression> expression expression_let
 
 /* Precedence declarations go here. */
+%nonassoc LET1
+%nonassoc LET2
+%nonassoc LET3
+%nonassoc LET4
 %right ASSIGN
 %left NOT
 %nonassoc LE '<' '='
@@ -326,13 +330,13 @@ expression
   ;
 
 expression_let
-  : OBJECTID ':' TYPEID IN expression
+  : OBJECTID ':' TYPEID IN expression %prec LET1
     {$$ = let($1, $3, no_expr() ,$5); }
-  | OBJECTID ':' TYPEID ',' expression_let
+  | OBJECTID ':' TYPEID ',' expression_let %prec LET2
     {$$ = let($1, $3, no_expr(), $5);}
-  | OBJECTID ':' TYPEID ASSIGN expression IN expression
+  | OBJECTID ':' TYPEID ASSIGN expression IN expression %prec LET3
     {$$ = let($1, $3, $5, $7); }
-  | OBJECTID ':' TYPEID ASSIGN expression ',' expression_let
+  | OBJECTID ':' TYPEID ASSIGN expression ',' expression_let %prec LET4
     {$$ = let($1, $3, $5, $7); }
 
   /* error handling */
