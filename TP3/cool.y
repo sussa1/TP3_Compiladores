@@ -68,11 +68,21 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 
 /* Declare types for the grammar's non-terminals. */
 %type <program> program
+
 %type <classes> class_list
 %type <class_> class
 
-/* You will want to change the following line. */
-%type <features> dummy_feature_list
+%type <features> feature_list
+%type <feature> feature
+
+%type <formals> formal_list
+%type <formal> formal
+  
+%type <cases> case_list
+%type <case_> case
+
+%type <expressions> expression_list_comma expression_list_semic
+%type <expression> expression
 
 /* Precedence declarations go here. */
 
@@ -94,16 +104,17 @@ class_list
 	;
 
 /* If no parent is specified, the class inherits from the Object class. */
-class	: CLASS TYPEID '{' dummy_feature_list '}' ';'
+/*class	: CLASS TYPEID '{' dummy_feature_list '}' ';'
 		{ $$ = class_($2,idtable.add_string("Object"),$4,
 			      stringtable.add_string(curr_filename)); }
 	| CLASS TYPEID INHERITS TYPEID '{' dummy_feature_list '}' ';'
 		{ $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); }
-	;
+	;*/
 
 /* Feature list may be empty, but no empty features in list. */
-dummy_feature_list:		/* empty */
-                {  $$ = nil_Features(); }
+
+/*dummy_feature_list:		/* empty 
+                {  $$ = nil_Features(); } */
 
 
 /* end of grammar */
