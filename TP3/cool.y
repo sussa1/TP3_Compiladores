@@ -160,7 +160,7 @@ formal_list
 	;
 
 formal
-  : OBJECTID ':' TYPEID ';'
+  : OBJECTID ':' TYPEID
     { $$ = formal($1, $3); }
   ;
 
@@ -186,10 +186,10 @@ expression_list_comma
 	;
 
 expression_list_semic
-  :	expression /* single expression */
+  :	expression ';' /* single expression */
     { $$ = single_Expressions($1); }
-	| expression_list_semic ';' expression	/* several expressions */
-		{ $$ = append_Expressions($1,single_Expressions($3)); }
+	| expression_list_semic expression ';'	/* several expressions */
+		{ $$ = append_Expressions($1,single_Expressions($2)); }
 
   /* error handling */
   | error
