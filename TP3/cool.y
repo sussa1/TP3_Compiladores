@@ -82,7 +82,7 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <case_> case
 
 %type <expressions> expression_list_comma expression_list_semic
-%type <expression> expression
+%type <expression> expression expression_let
 
 /* Precedence declarations go here. */
 %right ASSIGN
@@ -120,10 +120,119 @@ class	: CLASS TYPEID '{' feature_list '}' ';'
 	;
 
 /* Feature list may be empty, but no empty features in list. */
+feature_list
+  :				/* empty */
+		{  $$ = nil_Features(); }
+	| feature_list feature	/* several features */
+		{ $$ = append_Features($1,single_Features($2)); }
+	;
 
-/*dummy_feature_list:		/* empty 
-                {  $$ = nil_Features(); } */
+feature
+  : OBJECTID '(' formal_list ')' ':' TYPEID '{' expression '}' ';'
+    {  }
+  | OBJECTID ':' TYPEID ';'
+  | OBJECTID ':' TYPEID ASSIGN expression ';'
+  ;
 
+formal_list
+  :				/* empty */
+		{  $$ = nil_Formals(); }
+  | formal /* single formal */
+    { $$ = single_Formals($1); }
+	| feature_list ',' formal	/* several formals */
+		{ $$ = append_Formals($1,single_Formals($2)); }
+	;
+
+formal
+  : OBJECTID ':' TYPEID ';'
+    { $$ = formal($1, $3); }
+  ;
+
+case_list
+  : case /* single case */
+    { $$ = single_Cases($1); }
+  | case_list case /* several cases */
+    { $$ = append_Cases($1, single_Cases($2)); }
+  ;
+
+case
+  : OBJECTID ':' TYPEID DARROW expression ';'
+    { $$ = branch($1, $3, $5); }
+  ;
+
+expression_list_comma
+  :				/* empty */
+		{  $$ = nil_Formals(); }
+  | expression /* single expression */
+    { $$ = single_Expression($1); }
+	| expression_list_comma ',' expression	/* several expressions */
+		{ $$ = append_Expressions($1,single_Expressions($2)); }
+	;
+
+expression_list_semic
+  :	expression /* single expression */
+    { $$ = single_Expression($1); }
+	| expression_list_semic ';' expression	/* several expressions */
+		{ $$ = append_Expressions($1,single_Expressions($2)); }
+	;
+
+expression
+  : OBJECTID ASSIGN expression
+
+  | expression '.' OBJECTID '(' expression_list_comma ')'
+  | expression '@' TYPEID '.' OBJECTID '(' expression_list_comma ')'
+
+  | OBJECTID '(' expression_list_comma ')'
+
+  | IF expression THEN expression ELSE expression FI
+
+  | WHILE expression LOOP expression POOL
+
+  | '{' expression_list_semic '}'
+
+  | LET expression_let
+
+  | CASE expression OF case_list ESAC
+
+  | NEW TYPEID
+
+  | ISVOID expression
+
+  | expression '+' expression
+
+  | expression '-' expression
+
+  | expression '*' expression
+
+  | expression '/' expression
+
+  | '~' expression
+
+  | expression '<' expression
+
+  | expression LE expression
+
+  | expression '=' expression
+
+  | NOT expression
+
+  | '(' expression ')'
+
+  | OBJECTID
+
+  | INT_CONST
+
+  | STR_CONST
+
+  | BOOL_CONST
+  ;
+
+expression_let
+  : OBJECTID ':' TYPEID IN expression
+  | OBJECTID ':' TYPEID ',' expression_let
+  | OBJECTID ':' TYPEID ASSIGN expression IN expression
+  | OBJECTID ':' TYPEID ASSIGN expression ',' expression_let
+  ;
 
 /* end of grammar */
 %%
