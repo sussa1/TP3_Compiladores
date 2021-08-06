@@ -129,9 +129,11 @@ feature_list
 
 feature
   : OBJECTID '(' formal_list ')' ':' TYPEID '{' expression '}' ';'
-    {  }
+    {  $$ = method($1, $3, $6, $8); }
   | OBJECTID ':' TYPEID ';'
+    {  $$ = attr($1, $3, no_expr()); }
   | OBJECTID ':' TYPEID ASSIGN expression ';'
+    {  $$ = attr($1, $3, $5); }
   ;
 
 formal_list
@@ -178,60 +180,90 @@ expression_list_semic
 
 expression
   : OBJECTID ASSIGN expression
+    { $$ = assign($1, $3); }
 
   | expression '.' OBJECTID '(' expression_list_comma ')'
+    { $$ = dispatch($1, $3, $5); }
+
   | expression '@' TYPEID '.' OBJECTID '(' expression_list_comma ')'
+    { $$ = static_dispatch($1, $3, $5, $7); }
 
   | OBJECTID '(' expression_list_comma ')'
+    { $$ = dispatch(object(idtable.add_string("self")) ,$1 ,$3); }
 
   | IF expression THEN expression ELSE expression FI
+    { $$ = cond($2, $4, $6); }
 
   | WHILE expression LOOP expression POOL
+    { $$ = loop($2, $4); }
 
   | '{' expression_list_semic '}'
+    { $$ = block($2); }
 
   | LET expression_let
+    { $$ = $2; }
 
   | CASE expression OF case_list ESAC
+    { $$ = typcase($2, $4); }
 
   | NEW TYPEID
+    { $$ = new_($2); }
 
   | ISVOID expression
+    { $$ = isvoid($2); }
 
   | expression '+' expression
+    { $$ = plus($1, $3); }
 
   | expression '-' expression
+    { $$ = sub($1, $3); }
 
   | expression '*' expression
+    { $$ = mul($1, $3); }
 
   | expression '/' expression
+    { $$ = divide($1, $3); }
 
   | '~' expression
+    { $$ = neg($2); }
 
   | expression '<' expression
+    { $$ = lt($1, $3); }
 
   | expression LE expression
+    { $$ = leq($1, $3); }
 
   | expression '=' expression
+    { $$ = eq($1, $3); }
 
   | NOT expression
+    { $$ = comp($2); }
 
   | '(' expression ')'
+    { $$ = $2; }
 
   | OBJECTID
+    { $$ = object($1); }
 
   | INT_CONST
+    { $$ = int_const($1); }
 
   | STR_CONST
+    { $$ = string_const($1); }
 
   | BOOL_CONST
+    { $$ = bool_const($1); }
   ;
 
 expression_let
   : OBJECTID ':' TYPEID IN expression
+    {$$ = let($1, $3, no_expr() ,$5); }
   | OBJECTID ':' TYPEID ',' expression_let
+    {$$ = let($1, $3, no_expr(), $5);}
   | OBJECTID ':' TYPEID ASSIGN expression IN expression
+    {$$ = let($1, $3, $5, $7); }
   | OBJECTID ':' TYPEID ASSIGN expression ',' expression_let
+    {$$ = let($1, $3, $5, $7); }
   ;
 
 /* end of grammar */
