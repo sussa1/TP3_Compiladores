@@ -117,6 +117,14 @@ class	: CLASS TYPEID '{' feature_list '}' ';'
 			      stringtable.add_string(curr_filename)); }
 	| CLASS TYPEID INHERITS TYPEID '{' feature_list '}' ';'
 		{ $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); }
+
+  /* error handling */
+  | CLASS TYPEID '{' error '}' ';'
+    { yyclearin; }
+  | CLASS error '{' feature_list '}' ';'
+    { yyclearin; }
+  | CLASS error '{' error '}' ';'
+    { yyclearin; }
 	;
 
 /* Feature list may be empty, but no empty features in list. */
@@ -134,6 +142,58 @@ feature
     {  $$ = attr($1, $3, no_expr()); }
   | OBJECTID ':' TYPEID ASSIGN expression ';'
     {  $$ = attr($1, $3, $5); }
+
+  /* error handling */
+  | error '(' formal_list ')' ':' TYPEID '{' expression '}' ';'
+    { yyclearin; }
+  | OBJECTID '(' error ')' ':' TYPEID '{' expression '}' ';'
+    { yyclearin; }
+  | OBJECTID '(' formal_list ')' ':' error '{' expression '}' ';'
+    { yyclearin; }
+  | OBJECTID '(' formal_list ')' ':' TYPEID '{' error '}' ';'
+    { yyclearin; }
+  | error '(' error ')' ':' TYPEID '{' expression '}' ';'
+    { yyclearin; }
+  | error '(' formal_list ')' ':' error '{' expression '}' ';'
+    { yyclearin; }
+  | error '(' formal_list ')' ':' TYPEID '{' error '}' ';'
+    { yyclearin; }
+  | OBJECTID '(' error ')' ':' error '{' expression '}' ';'
+    { yyclearin; }
+  | OBJECTID '(' error ')' ':' TYPEID '{' error '}' ';'
+    { yyclearin; }
+  | OBJECTID '(' formal_list ')' ':' error '{' error '}' ';'
+    { yyclearin; }
+  | OBJECTID '(' error ')' ':' error '{' error '}' ';'
+    { yyclearin; }
+  | error '(' formal_list ')' ':' error '{' error '}' ';'
+    { yyclearin; }
+  | error '(' error ')' ':' TYPEID '{' error '}' ';'
+    { yyclearin; }
+  | error '(' error ')' ':' error '{' expression '}' ';'
+    { yyclearin; }
+  | error '(' error ')' ':' error '{' error '}' ';'
+    { yyclearin; }
+  | error ':' TYPEID ';'
+    { yyclearin; }
+  | OBJECTID ':' error ';'
+    { yyclearin; }
+  | error ':' error ';'
+    { yyclearin; }
+  | error ':' TYPEID ASSIGN expression ';'
+    { yyclearin; }
+  | OBJECTID ':' error ASSIGN expression ';'
+    { yyclearin; }
+  | OBJECTID ':' TYPEID ASSIGN error ';'
+    { yyclearin; }
+  | | error ':' error ASSIGN expression ';'
+    { yyclearin; }
+  | error ':' TYPEID ASSIGN error ';'
+    { yyclearin; }
+  | OBJECTID ':' error ASSIGN error ';'
+    { yyclearin; }
+  | error ':' error ASSIGN error ';'
+    { yyclearin; }
   ;
 
 formal_list
@@ -176,6 +236,16 @@ expression_list_semic
     { $$ = single_Expression($1); }
 	| expression_list_semic ';' expression	/* several expressions */
 		{ $$ = append_Expressions($1,single_Expressions($2)); }
+
+  /* error handling */
+  | error
+    { yyclearin; }
+  | error ';' expression
+    { yyclearin; }
+  | expression_list_semic ';' error
+    { yyclearin; }
+  | error ';' error
+    { yyclearin; }
 	;
 
 expression
@@ -264,6 +334,48 @@ expression_let
     {$$ = let($1, $3, $5, $7); }
   | OBJECTID ':' TYPEID ASSIGN expression ',' expression_let
     {$$ = let($1, $3, $5, $7); }
+
+  /* error handling */
+  | error ':' TYPEID ',' expression_let
+    { yyclearin; }
+  | OBJECTID ':' error ',' expression_let
+    { yyclearin; }
+  | OBJECTID ':' TYPEID ',' error
+    { yyclearin; }
+  | error ':' error ',' expression_let
+    { yyclearin; }
+  | error ':' TYPEID ',' error
+    { yyclearin; }
+  | error ':' error ',' error
+    { yyclearin; }
+  | error ':' TYPEID ASSIGN expression ',' expression_let
+    { yyclearin; }
+  | OBJECTID ':' error ASSIGN expression ',' expression_let
+    { yyclearin; }
+  | OBJECTID ':' TYPEID ASSIGN error ',' expression_let
+    { yyclearin; }
+  | OBJECTID ':' TYPEID ASSIGN expression ',' error
+    { yyclearin; }
+  | error ':' error ASSIGN expression ',' expression_let
+    { yyclearin; }
+  | error ':' TYPEID ASSIGN error ',' expression_let
+    { yyclearin; }
+  | error ':' TYPEID ASSIGN expression ',' error
+    { yyclearin; }  
+  | OBJECTID ':' error ASSIGN error ',' expression_let
+    { yyclearin; }
+  | OBJECTID ':' error ASSIGN expression ',' error
+    { yyclearin; }
+  | OBJECTID ':' TYPEID ASSIGN error ',' error
+    { yyclearin; }
+  | error ':' error ASSIGN error ',' expression_let
+    { yyclearin; }
+  | error ':' error ASSIGN expression ',' error
+    { yyclearin; }
+  | error ':' TYPEID ASSIGN error ',' error
+    { yyclearin; }
+  | error ':' error ASSIGN error ',' error
+    { yyclearin; }
   ;
 
 /* end of grammar */
