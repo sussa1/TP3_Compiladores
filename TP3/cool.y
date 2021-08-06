@@ -132,27 +132,30 @@ class	: CLASS TYPEID '{' feature_list '}' ';'
 /* Feature list may be empty, but no empty features in list. */
 feature_list
   :				/* empty */
-		{  $$ = nil_Features(); }
+		{ $$ = nil_Features(); }
 	| feature_list feature	/* several features */
 		{ $$ = append_Features($1,single_Features($2)); }
 
-  /* error handling */
-  | feature_list error
-    { yyclearin; }
+
 	;
 
 feature
   : OBJECTID '(' formal_list ')' ':' TYPEID '{' expression '}' ';'
-    {  $$ = method($1, $3, $6, $8); }
+    { $$ = method($1, $3, $6, $8); }
   | OBJECTID ':' TYPEID ';'
-    {  $$ = attr($1, $3, no_expr()); }
+    { $$ = attr($1, $3, no_expr()); }
   | OBJECTID ':' TYPEID ASSIGN expression ';'
-    {  $$ = attr($1, $3, $5); }
+    { $$ = attr($1, $3, $5); }
+  
+  /* error handling */
+  | error ';'
+    { yyclearin; }
+
   ;
 
 formal_list
   :				/* empty */
-		{  $$ = nil_Formals(); }
+		{ $$ = nil_Formals(); }
   | formal /* single formal */
     { $$ = single_Formals($1); }
 	| formal_list ',' formal	/* several formals */
@@ -178,7 +181,7 @@ case
 
 expression_list_comma
   :				/* empty */
-		{  $$ = nil_Expressions(); }
+		{ $$ = nil_Expressions(); }
   | expression /* single expression */
     { $$ = single_Expressions($1); }
 	| expression_list_comma ',' expression	/* several expressions */
@@ -277,13 +280,13 @@ expression
 
 expression_let
   : OBJECTID ':' TYPEID IN expression %prec LET1
-    {$$ = let($1, $3, no_expr() ,$5); }
+    { $$ = let($1, $3, no_expr() ,$5); }
   | OBJECTID ':' TYPEID ',' expression_let %prec LET2
-    {$$ = let($1, $3, no_expr(), $5);}
+    { $$ = let($1, $3, no_expr(), $5);}
   | OBJECTID ':' TYPEID ASSIGN expression IN expression %prec LET3
-    {$$ = let($1, $3, $5, $7); }
+    { $$ = let($1, $3, $5, $7); }
   | OBJECTID ':' TYPEID ASSIGN expression ',' expression_let %prec LET4
-    {$$ = let($1, $3, $5, $7); }
+    { $$ = let($1, $3, $5, $7); }
 
   /* error handling */
   | error ':' TYPEID ',' expression_let
