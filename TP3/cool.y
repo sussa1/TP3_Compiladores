@@ -186,7 +186,7 @@ feature
     { yyclearin; }
   | OBJECTID ':' TYPEID ASSIGN error ';'
     { yyclearin; }
-  | | error ':' error ASSIGN expression ';'
+  | error ':' error ASSIGN expression ';'
     { yyclearin; }
   | error ':' TYPEID ASSIGN error ';'
     { yyclearin; }
@@ -201,8 +201,8 @@ formal_list
 		{  $$ = nil_Formals(); }
   | formal /* single formal */
     { $$ = single_Formals($1); }
-	| feature_list ',' formal	/* several formals */
-		{ $$ = append_Formals($1,single_Formals($2)); }
+	| formal_list ',' formal	/* several formals */
+		{ $$ = append_Formals($1,single_Formals($3)); }
 	;
 
 formal
@@ -224,18 +224,18 @@ case
 
 expression_list_comma
   :				/* empty */
-		{  $$ = nil_Formals(); }
+		{  $$ = nil_Expressions(); }
   | expression /* single expression */
-    { $$ = single_Expression($1); }
+    { $$ = single_Expressions($1); }
 	| expression_list_comma ',' expression	/* several expressions */
-		{ $$ = append_Expressions($1,single_Expressions($2)); }
+		{ $$ = append_Expressions($1,single_Expressions($3)); }
 	;
 
 expression_list_semic
   :	expression /* single expression */
-    { $$ = single_Expression($1); }
+    { $$ = single_Expressions($1); }
 	| expression_list_semic ';' expression	/* several expressions */
-		{ $$ = append_Expressions($1,single_Expressions($2)); }
+		{ $$ = append_Expressions($1,single_Expressions($3)); }
 
   /* error handling */
   | error
