@@ -85,7 +85,15 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %type <expression> expression
 
 /* Precedence declarations go here. */
-
+%right ASSIGN
+%left NOT
+%nonassoc LE '<' '='
+%left '+' '-'
+%left '*' '/'
+%nonassoc ISVOID
+%nonassoc '~'
+%nonassoc '@'
+%nonassoc '.'
 
 %%
 /* 
