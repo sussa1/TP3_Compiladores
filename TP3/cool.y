@@ -9,7 +9,14 @@
 #include "stringtab.h"
 #include "utilities.h"
 
+#define YYLTYPE int
+#define cool_yylloc curr_lineno
+
 extern char *curr_filename;
+extern int node_lineno;
+
+#define YYLLOC_DEFAULT(Current, Rhs, N) \
+  Current = node_lineno = Rhs[1];
 
 void yyerror(char *s);        /*  defined below; called for each parse error */
 extern int yylex();           /*  the entry point to the lexer  */
