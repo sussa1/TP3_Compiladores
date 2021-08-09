@@ -110,7 +110,7 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 /* 
    Save the root of the abstract syntax tree in a global variable.
 */
-program	: class_list	{ ast_root = program($1); }
+program	: class_list	{ @$ = @1; ast_root = program($1); }
         ;
 
 class_list
