@@ -16,16 +16,16 @@ class List {
       head = error; 
       head = tail;
    };
-   head(): Int { 
+   gethead(): Int { 
       head.getVal()
    };
-   tail()  : List { 
+   gettail()  : List { 
       tail.getVal()
    };
 };
 
 class Stack inherits List {
    top()- Int {
-      tail()
-   }
+      gettail()
+   };
 };

@@ -7,7 +7,7 @@ class Point {
             y <- newy;
             self;
         }
-    }
+    };
     movePoint2(newX: Int): Point {
         {
             x <- newX;
