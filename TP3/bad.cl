@@ -24,21 +24,17 @@ Class E inherts A {
         {       
             x <- newz;
             movePoint(newX?2, newX^2);
-            let wx;Int, wy:Int <-- 0 in 
-            {
-                x <- newx;
-                y <- newy;
-                self;
-            };
-
-        }
-    };
-    movePoint3(): Point {
-        {
             case y of 
                 a : Int => 2 <> 1;
                 b : Bool => Bool;
             esac;
+        }
+    };
+    movePoint3(): Point {
+        let wx;Int, wy:Int <-- 0 in 
+        {
+            x <- newx;
+            y <- newy;
             self;
         }
     };
