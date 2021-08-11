@@ -96,8 +96,6 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %nonassoc LET2
 %nonassoc LET3
 %nonassoc LET4
-%nonassoc LET5
-%nonassoc LET6
 %right ASSIGN
 %left NOT
 %nonassoc LE '<' '='
@@ -122,12 +120,6 @@ class_list
 	| class_list class	/* several classes */
 		{ $$ = append_Classes($1,single_Classes($2)); 
                   parse_results = $$; }
-
-  /* error handling */
-  | error
-    { yyclearin; }
-  | class_list error
-    { yyclearin; }
 	;
 
 /* If no parent is specified, the class inherits from the Object class. */
@@ -136,6 +128,11 @@ class	: CLASS TYPEID '{' feature_list '}' ';'
 			      stringtable.add_string(curr_filename)); }
 	| CLASS TYPEID INHERITS TYPEID '{' feature_list '}' ';'
 		{ $$ = class_($2,$4,$6,stringtable.add_string(curr_filename)); }
+  
+
+  /* error handling */
+  | error ';'
+    { yyclearin; }
 	;
 
 /* Feature list may be empty, but no empty features in list. */
