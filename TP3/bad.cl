@@ -1,20 +1,49 @@
-(* no error *)
 class A {
 };
 
-(* error:  b is not a type identifier *)
 Class b inherits A {
 };
 
-(* error:  a is not a type identifier *)
 Class C inherits a {
 };
 
-(* error:  keyword inherits is misspelled *)
 Class D inherts A {
 };
 
-(* error:  closing brace is missing *)
-Class E inherits A {
+Class E inherts A {
+    x : Int <- 0;
+    y : Int - 0;
+    movePoint (newx : Int, newy : Int) : Point {
+        {       
+            x <- newx;
+            y - newy;
+            self;
+        }
+    };
+    movePoint2 (newx - Int, newy Int) : Point {
+        {       
+            x <- newz;
+            movePoint(newX?2, newX^2);
+            let wx;Int, wy:Int <-- 0 in 
+            {
+                x <- newx;
+                y <- newy;
+                self;
+            };
+
+        }
+    };
+    movePoint3(): Point {
+        {
+            case y of 
+                a : Int => 2 <> 1;
+                b : Bool => Bool;
+            esac;
+            self;
+        }
+    };
+};
+
+Class F inherits A {
 ;
 
