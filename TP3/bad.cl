@@ -31,10 +31,13 @@ Class E inherits A {
         }
     };
     movePoint3(): Point {
-        let wx-Int, wz:Int, wy-Int <- 0 in 
         {
-            x <- newx;
-            y <- newy;
+            let wx-Int, wz:Int, wy-Int <- 0 in 
+            {
+                x <- newx;
+                y <- newy;
+                self;
+            };
             self;
         }
     };
