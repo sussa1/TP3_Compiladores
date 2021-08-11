@@ -1,7 +1,7 @@
 class Node {
    val: Int;
    prox: Node;
-}
+};
 
 class List {
    head: Node;
