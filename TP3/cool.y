@@ -170,7 +170,6 @@ formal_list
     { yyclearin; }
   | formal_list ',' error
     { yyclearin; }
-  ;
 	;
 
 formal
