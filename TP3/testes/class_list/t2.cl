@@ -1,6 +1,12 @@
 class Node {
    val = Int;
    prox: Node;
+   getVal() : Int  {
+      val
+   };
+   getProx() : Node  {
+      prox
+   };
 };
 
 class List {
@@ -11,10 +17,10 @@ class List {
       head = tail;
    };
    head(): Int { 
-      head.val
+      head.getVal()
    };
    tail()  : List { 
-      tail.val
+      tail.getVal()
    };
 };
 
