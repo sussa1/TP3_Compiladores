@@ -1,3 +1,6 @@
+Vitor Rodarte Ricoy - 2019007112
+Vitor Assunção Rabello de Oliveira - 2019007104
+
 As decisões que tomamos são:
 
 - Listas opcionais podem ser vazias e são tratadas nas próprias regras que recebem a lista. Isto é, não são criadas novas produções para listas opcionais (como os parâmetros de uma função), apenas é permitido que a lista seja vazia.
