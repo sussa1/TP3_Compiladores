@@ -18,7 +18,7 @@ ou ',' não é garantido que os erros seguintes nessa estrutura serão capturado
 - Decidimos criar casos de testes para todos os não terminais, cobrindo todas as produções.
 
 Já sobre os testes, criamos testes para todos os não terminais tentando cobrir todas as produções destes. No caso o arquivo good.cl contém o teste para o não terminal expression e o arquivo 
-bad.cl contém um conjunto de testes de não terminais com erros. O restante dos testes estão em pastas de acordo com o não terminal correspondente. Além disso, testamos os resultados do nosso 
+bad.cl contém um conjunto de erros que são tratados pelo parser. O restante dos testes estão em pastas de acordo com o não terminal correspondente. Além disso, testamos os resultados do nosso 
 parser em comparação com o parser fornecido para o TP4. As diferenças encontradas foram:
 
 - Um erro a mais no terceiro teste do não terminal case_list, o que faz sentido pois criamos um novo tratamento de erro para o case_list.
