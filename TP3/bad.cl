@@ -10,7 +10,7 @@ Class C inherits a {
 Class D inherts A {
 };
 
-Class E inherts A {
+Class E inherits A {
     x : Int <- 0;
     y : Int - 0;
     movePoint (newx : Int, newy : Int) : Point {
@@ -31,7 +31,7 @@ Class E inherts A {
         }
     };
     movePoint3(): Point {
-        let wx;Int, wy:Int <-- 0 in 
+        let wx-Int, wz:Int, wy-Int <- 0 in 
         {
             x <- newx;
             y <- newy;
