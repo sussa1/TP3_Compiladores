@@ -1,12 +1,3 @@
-
-(*
- *  execute "coolc bad.cl" to see the error messages that the coolc parser
- *  generates
- *
- *  execute "myparser bad.cl" to see the error messages that your parser
- *  generates
- *)
-
 (* no error *)
 class A {
 };
