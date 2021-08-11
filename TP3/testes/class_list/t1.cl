@@ -26,5 +26,5 @@ class List {
 class Stack inherits List {
    top(): Int {
       tail()
-   }
+   };
 };

@@ -13,17 +13,17 @@ class TesteExpression inherits ClasseMae {
     };
     testeTodasExpr() : Bool {
         {       
-            foo <- 10
-            dummy <- 15
+            foo <- 10;
+            dummy <- 15;
             variavel1 <- self.valorInteiro(foo, dummy);
             variavel2 <- irmao.valorInteiro(foo, dummy);
             variavel3 <- irmao @ ClasseMae . valorInteiro(foo, dummy);
             variavel4 <- valorInteiro(foo, dummy);
-            variavel5 <- if valorInteiro(foo, dummy) = 10 then 1 else 2;
+            variavel5 <- if valorInteiro(foo, dummy) = 10 then 1 else 2 fi;
             let cont: Int <- 10 in {
              while 0 <= cont LOOP cont <- cont-1 POOL;
              calc <- cont;
-            }
+            };
             case calc OF
                 calcInt : Int => calcInt-10;
                 calcString : String => msgString + calcInt;
@@ -41,7 +41,7 @@ class TesteExpression inherits ClasseMae {
             variavel16 <- variavel1 = variavel2;
             variavel17 <- NOT variavel1 = variavel2;
             variavel18 <- (variavel1 + variavel2) * (variavel1 + variavel2);
-            variavel18
+            variavel18;
             10;
             "Teste";
             true;
