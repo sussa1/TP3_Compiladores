@@ -96,6 +96,8 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %nonassoc LET2
 %nonassoc LET3
 %nonassoc LET4
+%nonassoc LET5
+%nonassoc LET6
 %right ASSIGN
 %left NOT
 %nonassoc LE '<' '='
@@ -299,8 +301,11 @@ expression_let
     { $$ = let($1, $3, $5, $7); }
 
   /* error handling */
-  | error ',' expression_let
-    { yyclearin; }
+  | error ',' expression_let %prec LET5
+    { yyerrok; $$ = NULL; }
+  | error IN expression %prec LET6
+    { yyerrok; $$ = NULL; }
+
   ;
 
 /* end of grammar */

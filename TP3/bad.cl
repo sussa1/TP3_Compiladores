@@ -32,7 +32,7 @@ Class E inherits A {
     };
     movePoint3(): Point {
         {
-            let wx-Int, wz:Int, wy-Int <- 0 in 
+            let wx-Int, wz:Int, wy?Int <- 0, w:Int in 
             {
                 x <- newx;
                 y <- newy;
