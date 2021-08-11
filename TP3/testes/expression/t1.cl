@@ -11,8 +11,10 @@ class TesteExpression inherits ClasseMae {
     valorInteiro(foo : Int, dummy : Int) : Int {
         10
     };
-    testeTodasExpr(foo : Int, dummy : Int) : Bool {
+    testeTodasExpr() : Bool {
         {       
+            foo <- 10
+            dummy <- 15
             variavel1 <- self.valorInteiro(foo, dummy);
             variavel2 <- irmao.valorInteiro(foo, dummy);
             variavel3 <- irmao @ ClasseMae . valorInteiro(foo, dummy);
