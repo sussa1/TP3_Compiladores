@@ -14,7 +14,7 @@ Já sobre os testes, criamos testes para todos os não terminais, tentando cobri
 
 - Um erro a mais no terceiro teste do não terminal case_list, o que faz sentido pois criamos um novo tratamento de erro para o case_list.
 
-- # diferentes no primeiro teste do não terminal class_list, no primeiro teste do não terminal expression e no primeiro, terceiro e quarto teste do terminal expression_list.
+- '#' diferentes no primeiro teste do não terminal class_list, no primeiro teste do não terminal expression e no primeiro, terceiro e quarto teste do terminal expression_list.
 
 - Um erro a menos no segundo teste do não terminal class_list, o que para nós faz sentido, já que o erro apontado pelo parser do TP4 não é realmente um erro, portanto não era necessário detectá-lo. Esse erro extra é causado pela má formação da feature anterior, que gera resultados errados para o parser. 
 
