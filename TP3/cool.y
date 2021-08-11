@@ -170,10 +170,6 @@ formal_list
 formal
   : OBJECTID ':' TYPEID
     { $$ = formal($1, $3); }
-  
-  /* error handling */
-  | error
-    { yyclearin; }
   ;
 
 case_list
