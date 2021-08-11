@@ -165,16 +165,15 @@ formal_list
     { $$ = single_Formals($1); }
 	| formal_list ',' formal	/* several formals */
 		{ $$ = append_Formals($1,single_Formals($3)); }
-  /* error handling */
-  | error
-    { yyclearin; }
-  | formal_list ',' error
-    { yyclearin; }
 	;
 
 formal
   : OBJECTID ':' TYPEID
     { $$ = formal($1, $3); }
+  
+  /* error handling */
+  | error
+    { yyclearin; }
   ;
 
 case_list
@@ -182,16 +181,15 @@ case_list
     { $$ = single_Cases($1); }
   | case_list case /* several cases */
     { $$ = append_Cases($1, single_Cases($2)); }
-  /* error handling */
-  | error
-    { yyclearin; }
-  | case_list error
-    { yyclearin; }
   ;
 
 case
   : OBJECTID ':' TYPEID DARROW expression ';'
     { $$ = branch($1, $3, $5); }
+  
+  /* error handling */
+  | error ';'
+    { yyclearin; }
   ;
 
 expression_list_comma
@@ -201,11 +199,6 @@ expression_list_comma
     { $$ = single_Expressions($1); }
 	| expression_list_comma ',' expression	/* several expressions */
 		{ $$ = append_Expressions($1,single_Expressions($3)); }
-  /* error handling */
-  | error
-    { yyclearin; }
-  | expression_list_comma ',' error
-    { yyclearin; }
 	;
 
 expression_list_semic
@@ -213,12 +206,6 @@ expression_list_semic
     { $$ = single_Expressions($1); }
 	| expression_list_semic expression ';'	/* several expressions */
 		{ $$ = append_Expressions($1,single_Expressions($2)); }
-
-  /* error handling */
-  | error
-    { yyclearin; }
-  | expression_list_semic ';' error
-    { yyclearin; }
 	;
 
 expression
@@ -296,6 +283,10 @@ expression
 
   | BOOL_CONST
     { $$ = bool_const($1); }
+
+  /* error handling */
+  | error
+    { yyclearin; }
   ;
 
 expression_let
