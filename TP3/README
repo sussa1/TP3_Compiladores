@@ -31,5 +31,7 @@ por má formação do início do let.
 - Um erro a menos no segundo teste do não terminal class_list, o que para nós faz sentido, já que o erro apontado pelo parser do TP4 não é realmente um erro, portanto não era necessário 
 detectá-lo. Esse erro extra é causado pela má formação da feature anterior, que gera resultados errados para o parser. 
 
+- Um erro a mais no bad.cl devido ao tratamento de erro do case_list implementado por nós.
+
 Por fim, acreditamos que nosso programa está correto, pois durante a construção do parser as operações feitas fizeram sentido, portanto a implementação pareceu correta. Além disso, 
 testamos o nosso parser com o do TP4, que está correto, e os resultados foram iguais, com exceção dos resultados que possuem motivos para estarem diferentes.
