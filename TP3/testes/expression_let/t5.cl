@@ -5,7 +5,7 @@ class Point {
         let wx;Int, wy:Int <-- 0 in 
         {
             x <- newx;
-            y <- newy;
+            y <-- newy;
             self;
         }
     };
