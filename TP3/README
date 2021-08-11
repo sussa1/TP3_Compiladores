@@ -3,22 +3,33 @@ Vitor Assunção Rabello de Oliveira - 2019007104
 
 As decisões que tomamos são:
 
-- Listas opcionais podem ser vazias e são tratadas nas próprias regras que recebem a lista. Isto é, não são criadas novas produções para listas opcionais (como os parâmetros de uma função), apenas é permitido que a lista seja vazia.
+- Listas opcionais podem ser vazias e são tratadas nas próprias regras que recebem a lista. Isto é, não são criadas novas produções para listas opcionais (como os parâmetros de uma função), 
+apenas é permitido que a lista seja vazia.
 
-- Foi criada uma produção do tipo expression para representar um conjunto de expressões no let. Isso permite mais facilmente a recuperação de erros no let e também que representemos esse conjunto de expressões de forma recursiva.
+- Foi criada uma produção do tipo expression para representar um conjunto de expressões no let. Isso permite mais facilmente a recuperação de erros no let e também que representemos esse 
+conjunto de expressões de forma recursiva.
 
-- Adicionamos um tratamento de erro para a produção case_list para permitir que caso diversos statements do case tenham erro, e todos esses statements estejam separados por ';', todos eles sejam capturados.
+- Adicionamos um tratamento de erro para a produção case_list para permitir que caso diversos statements do case tenham erro, e todos esses statements estejam separados por ';', todos eles 
+sejam capturados.
 
-- Consideramos que o nosso compilador deve se recuperar de erros apenas se a estrutura com erro esteja bem formada. Ou seja, caso se tenha erros envolvendo símbolos '{', '}', '(', ')', ';' ou ',' não é garantido que os erros seguintes nessa estrutura serão capturados.
+- Consideramos que o nosso compilador deve se recuperar de erros apenas se a estrutura com erro esteja bem formada. Ou seja, caso se tenha erros envolvendo símbolos '{', '}', '(', ')', ';' 
+ou ',' não é garantido que os erros seguintes nessa estrutura serão capturados.
 
 - Decidimos criar casos de testes para todos os não terminais, cobrindo todas as produções.
 
-Já sobre os testes, criamos testes para todos os não terminais, tentando cobrir todas as produções destes. Além disso, testamos os resultados do nosso parser em comparação com o parser fornecido para o TP4. As diferenças encontradas foram:
+Já sobre os testes, criamos testes para todos os não terminais tentando cobrir todas as produções destes. No caso o arquivo good.cl contém o teste para o não terminal expression e o arquivo 
+bad.cl contém um conjunto de testes de não terminais com erros. O restante dos testes estão em pastas de acordo com o não terminal correspondente. Além disso, testamos os resultados do nosso 
+parser em comparação com o parser fornecido para o TP4. As diferenças encontradas foram:
 
 - Um erro a mais no terceiro teste do não terminal case_list, o que faz sentido pois criamos um novo tratamento de erro para o case_list.
 
+- Um erro a mais no quinto teste do não terminal expression_let, o que faz sentido, pois todos os erros encontrados são válidos. O parser do TP4 provavelmente não encontra o terceiro erro
+por má formação do início do let.
+
 - '#' diferentes no primeiro teste do não terminal class_list, no primeiro teste do não terminal expression e no primeiro, terceiro e quarto teste do terminal expression_list.
 
-- Um erro a menos no segundo teste do não terminal class_list, o que para nós faz sentido, já que o erro apontado pelo parser do TP4 não é realmente um erro, portanto não era necessário detectá-lo. Esse erro extra é causado pela má formação da feature anterior, que gera resultados errados para o parser. 
+- Um erro a menos no segundo teste do não terminal class_list, o que para nós faz sentido, já que o erro apontado pelo parser do TP4 não é realmente um erro, portanto não era necessário 
+detectá-lo. Esse erro extra é causado pela má formação da feature anterior, que gera resultados errados para o parser. 
 
-Por fim, acreditamos que nosso programa está correto, pois durante a construção do parser as operações feitas fizeram sentido, portanto a implementação pareceu correta. Além disso, testamos o nosso parser com o do TP4, que está correto, e os resultados foram iguais, com exceção dos resultados que possuem motivos para estarem diferentes.
+Por fim, acreditamos que nosso programa está correto, pois durante a construção do parser as operações feitas fizeram sentido, portanto a implementação pareceu correta. Além disso, 
+testamos o nosso parser com o do TP4, que está correto, e os resultados foram iguais, com exceção dos resultados que possuem motivos para estarem diferentes.
