@@ -96,6 +96,8 @@ int omerrs = 0;               /* number of errors in lexing and parsing */
 %nonassoc LET2
 %nonassoc LET3
 %nonassoc LET4
+%nonassoc LET5
+%nonassoc LET6
 %right ASSIGN
 %left NOT
 %nonassoc LE '<' '='
@@ -300,45 +302,7 @@ expression_let
     { $$ = let($1, $3, $5, $7); }
 
   /* error handling */
-  | error ':' TYPEID ',' expression_let
-    { yyclearin; }
-  | OBJECTID ':' error ',' expression_let
-    { yyclearin; }
-  | OBJECTID ':' TYPEID ',' error
-    { yyclearin; }
-  | error ':' error ',' expression_let
-    { yyclearin; }
-  | error ':' TYPEID ',' error
-    { yyclearin; }
-  | error ':' error ',' error
-    { yyclearin; }
-  | error ':' TYPEID ASSIGN expression ',' expression_let
-    { yyclearin; }
-  | OBJECTID ':' error ASSIGN expression ',' expression_let
-    { yyclearin; }
-  | OBJECTID ':' TYPEID ASSIGN error ',' expression_let
-    { yyclearin; }
-  | OBJECTID ':' TYPEID ASSIGN expression ',' error
-    { yyclearin; }
-  | error ':' error ASSIGN expression ',' expression_let
-    { yyclearin; }
-  | error ':' TYPEID ASSIGN error ',' expression_let
-    { yyclearin; }
-  | error ':' TYPEID ASSIGN expression ',' error
-    { yyclearin; }  
-  | OBJECTID ':' error ASSIGN error ',' expression_let
-    { yyclearin; }
-  | OBJECTID ':' error ASSIGN expression ',' error
-    { yyclearin; }
-  | OBJECTID ':' TYPEID ASSIGN error ',' error
-    { yyclearin; }
-  | error ':' error ASSIGN error ',' expression_let
-    { yyclearin; }
-  | error ':' error ASSIGN expression ',' error
-    { yyclearin; }
-  | error ':' TYPEID ASSIGN error ',' error
-    { yyclearin; }
-  | error ':' error ASSIGN error ',' error
+  | error ',' expression_let
     { yyclearin; }
   ;
 
