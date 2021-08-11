@@ -21,7 +21,7 @@ Class E inherits A {
         }
     };
     movePoint2 (newx - Int, newy Int) : Point {
-        {       
+        {
             x <- newz;
             movePoint(newX?2, newX^2);
             case y of 
