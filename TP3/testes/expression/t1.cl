@@ -1,17 +1,17 @@
 class ClasseMae {
-    valorInteiro(foo, dummy) : Int {
+    valorInteiro(foo : Int, dummy : Int) : Int {
         20
-    }
-}
+    };
+};
 
 class TesteExpression inherits ClasseMae {
     irmao : TesteExpression;
     calc : Int;
     msgString: String <- "O valor eh: ";
-    valorInteiro(foo, dummy) : Int {
+    valorInteiro(foo : Int, dummy : Int) : Int {
         10
     };
-    testeTodasExpr(foo, dummy) : Bool {
+    testeTodasExpr(foo : Int, dummy : Int) : Bool {
         {       
             variavel1 <- self.valorInteiro(foo, dummy);
             variavel2 <- irmao.valorInteiro(foo, dummy);
