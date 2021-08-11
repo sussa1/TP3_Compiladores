@@ -300,45 +300,11 @@ expression_let
     { $$ = let($1, $3, $5, $7); }
 
   /* error handling */
-  | error ':' TYPEID ',' expression_let
+  | OBJECTID ':' TYPEID ',' error %prec LET2
     { yyclearin; }
-  | OBJECTID ':' error ',' expression_let
+  | OBJECTID ':' TYPEID ASSIGN expression ',' expression_let %prec LET4
     { yyclearin; }
-  | OBJECTID ':' TYPEID ',' error
-    { yyclearin; }
-  | error ':' error ',' expression_let
-    { yyclearin; }
-  | error ':' TYPEID ',' error
-    { yyclearin; }
-  | error ':' error ',' error
-    { yyclearin; }
-  | error ':' TYPEID ASSIGN expression ',' expression_let
-    { yyclearin; }
-  | OBJECTID ':' error ASSIGN expression ',' expression_let
-    { yyclearin; }
-  | OBJECTID ':' TYPEID ASSIGN error ',' expression_let
-    { yyclearin; }
-  | OBJECTID ':' TYPEID ASSIGN expression ',' error
-    { yyclearin; }
-  | error ':' error ASSIGN expression ',' expression_let
-    { yyclearin; }
-  | error ':' TYPEID ASSIGN error ',' expression_let
-    { yyclearin; }
-  | error ':' TYPEID ASSIGN expression ',' error
-    { yyclearin; }  
-  | OBJECTID ':' error ASSIGN error ',' expression_let
-    { yyclearin; }
-  | OBJECTID ':' error ASSIGN expression ',' error
-    { yyclearin; }
-  | OBJECTID ':' TYPEID ASSIGN error ',' error
-    { yyclearin; }
-  | error ':' error ASSIGN error ',' expression_let
-    { yyclearin; }
-  | error ':' error ASSIGN expression ',' error
-    { yyclearin; }
-  | error ':' TYPEID ASSIGN error ',' error
-    { yyclearin; }
-  | error ':' error ASSIGN error ',' error
+  | error
     { yyclearin; }
   ;
 
