@@ -828,6 +828,8 @@ void CgenClassTable::code()
   if (cgen_debug) cout << "coding constants" << endl;
   code_constants();
 
+  if (cgen_debug) cout << "coding prototype objects" << endl;
+  code_prototypeObjects();
 //                 Add your code to emit
 //                   - prototype objects
 //                   - class_nameTab
@@ -842,6 +844,10 @@ void CgenClassTable::code()
 //                   - the class methods
 //                   - etc...
 
+}
+
+CgenClassTable::code_prototypeObjects() {
+  auto classes = GetClassNodes();
 }
 
 
