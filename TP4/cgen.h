@@ -35,6 +35,7 @@ private:
    void code_constants();
    void code_prototypeObjects();
    std::vector<std::pair<CgenNode*, std::pair<int, int> > > getClassNodeTagAndSize();
+   void code_classNameTab();
 
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as
