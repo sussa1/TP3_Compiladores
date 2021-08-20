@@ -629,11 +629,9 @@ CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
    boolclasstag =   3 /* Change to your Bool class tag here */;
 
    enterscope();
-   if (cgen_debug) cout << "Building CgenClassTable" << endl;
    install_basic_classes();
    install_classes(classes);
    build_inheritance_tree();
-
    code();
    exitscope();
 }
@@ -894,7 +892,7 @@ void CgenClassTable::code_prototypeObjects() {
 
 void CgenNode::code_prototypeObjects(ostream& str, int tag, int size) {
   if(cgen_debug) {
-    cout << "Gerando código da classe " << this->getname() << endl;
+    cout << "Gerando código da classe " << this->get_name() << endl;
   }
   // Adiciona o "eyecatcher"
   str << WORD << "-1" << endl;

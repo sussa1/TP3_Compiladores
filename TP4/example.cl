@@ -5,5 +5,6 @@
 
 class Main {
   main():Int { 0 };
+  test:Int <- 0;
 };
 
