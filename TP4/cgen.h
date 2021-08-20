@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <algorithm>
 #include "emit.h"
 #include "cool-tree.h"
 #include "symtab.h"
@@ -31,6 +32,8 @@ private:
    void code_bools(int);
    void code_select_gc();
    void code_constants();
+   void code_prototypeObjects();
+   std::vector<std::pair<CgenNode*, std::pair<int, int> > > getClassNodeTagAndSize();
 
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as
@@ -66,6 +69,12 @@ public:
    void set_parentnd(CgenNodeP p);
    CgenNodeP get_parentnd() { return parentnd; }
    int basic() { return (basic_status == Basic); }
+   
+   // Métodos auxiliaries para a emissão de código
+   // de constantes e declarações globais
+   void code_prototypeObjects(ostream& str, int tag, int size);
+   int getSize();
+   void code_attributesPrototypeObjects(ostream& str, int& offset)
 };
 
 class BoolConst 

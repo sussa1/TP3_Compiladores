@@ -24,9 +24,13 @@
 
 #include "cgen.h"
 #include "cgen_gc.h"
+#include <algorithm>
+#include <map>
 
 extern void emit_string_constant(ostream& str, char *s);
 extern int cgen_debug;
+
+std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassAttr;
 
 //
 // Three symbols from the semantic analyzer (semant.cc) are used.
@@ -619,9 +623,9 @@ void CgenClassTable::code_constants()
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s) : nds(NULL) , str(s)
 {
-   stringclasstag = 0 /* Change to your String class tag here */;
-   intclasstag =    0 /* Change to your Int class tag here */;
-   boolclasstag =   0 /* Change to your Bool class tag here */;
+   stringclasstag = 1 /* Change to your String class tag here */;
+   intclasstag =    2 /* Change to your Int class tag here */;
+   boolclasstag =   3 /* Change to your Bool class tag here */;
 
    enterscope();
    if (cgen_debug) cout << "Building CgenClassTable" << endl;
@@ -846,10 +850,100 @@ void CgenClassTable::code()
 
 }
 
-CgenClassTable::code_prototypeObjects() {
-  auto classes = GetClassNodes();
+std::vector<std::pair<CgenNode*, std::pair<int, int> > > CgenClassTable::getClassNodeTagAndSize() {
+  auto nodeList = this->nds;
+  int counterTag = 4;
+  vector<std::pair<CgenNode*, std::pair<int, int> > > namesTagsSize;
+  // Salva a tag e o nó de cada classe
+  for(List<CgenNode>* list = nds; list != nullptr; list = list->tl()) {
+    auto node = list->hd();
+    int tag = counterTag++;
+    int size = node->getSize();
+    namesTagsSize.pb({node, {tag, size}});
+  }
+  return namesTagsSize;
 }
 
+int CgenNode::getSize() {
+  int sizeClass = 0;
+  auto features = this->features;
+  for(int it = features->first(); features->more(it); it = features->next(it)) {
+    auto feature = features->nth(it);
+    // Feature é do tipo atributo
+    if(feature->type() == 1) {
+      sizeClass++;
+    }
+  }
+
+  // Soma o tamanho da classe com o tamanho da classe pai
+  if(this->get_parentnd() != nullptr) {
+    sizeClass += this->get_parentnd()->getSize();
+  }
+
+  return sizeClass;
+}
+
+void CgenClassTable::code_prototypeObjects() {
+  auto classes = this->getClassNodeTagAndSize();
+  // Chama a geração de código do nó da classe
+  for(auto classNode : classes) {
+    classNode.first->code_prototypeObjects(this->str, classNode.second.first, classNode.second.second);
+  }
+}
+
+void CgenNode::code_prototypeObjects(ostream& str, int tag, int size) {
+  // Adiciona o "eyecatcher"
+  str << WORD << "-1" << endl;
+  // Adiciona a tag do garbage collector
+  str << this->get_name() << PROTOBJ_SUFFIX << LABEL;
+  // Adiciona a tag da classe
+  str << WORD << tag << endl;
+  // Adiciona o tamanho da classe
+  str << WORD <<  DEFAULT_OBJFIELDS + size << endl;
+  // Adiciona o ponteiro para a tabela de dispatch
+  str << WORD << this->get_name() << DISPTAB_SUFFIX << endl;
+  // Adiciona os atributos, com offset inicial igual a 3, pois já existem outros
+  // 3 campos de objetos padrões
+  this->code_attributesPrototypeObjects(str, 3);
+}
+
+void CgenNode::code_attributesPrototypeObjects(ostream& str, int& offset) {
+  // Gera os atributos do pai, caso tenha
+  if(this->get_parentnd() != nullptr) {
+    this->get_parentnd() -> code_attributesPrototypeObjects(str, offset);
+  }
+
+  auto features = this->features;
+  for(int it = features->first(); features->more(it); it = features->next(it)) {
+    auto feature = features->nth(it);
+    // Feature é do tipo atributo
+    if(feature->type() == 1) {
+      attr_class* attribute = (attr_class*)feature;
+      auto typeAttribute = attribute->type_decl;
+      // Salva o tipo e o offset de cada atributo
+      typeOffsetClassAttr[this->get_name()][attribute->get_name()] = {typeAttribute, offset++};
+      // Gera o código que inicializa os atributos
+      if(typeAttribute == String) {
+        str << WORD;
+        stringtable.lookup_string("")->code_ref(str);
+        str << endl;
+      }
+      else if(typeAttribute == Int) {
+        IntEntryP entradaInt = inttable.add_int(0);
+        str << WORD;
+        entradaInt->code_ref(str);
+        str << endl;
+      }
+      else if(typeAttribute == Bool) {
+        str << WORD;
+        falsebool.code_ref(str);
+        str << endl;
+      } else {
+        str << WORD << 0 << endl;
+      }
+    }
+  }
+}
 
 CgenNodeP CgenClassTable::root()
 {
