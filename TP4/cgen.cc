@@ -893,6 +893,9 @@ void CgenClassTable::code_prototypeObjects() {
 }
 
 void CgenNode::code_prototypeObjects(ostream& str, int tag, int size) {
+  if(cgen_debug) {
+    cout << "Gerando código da classe " << this->getname() << endl;
+  }
   // Adiciona o "eyecatcher"
   str << WORD << "-1" << endl;
   // Adiciona a tag do garbage collector
