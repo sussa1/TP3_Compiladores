@@ -833,8 +833,11 @@ void CgenClassTable::code()
 
   if (cgen_debug) cout << "coding prototype objects" << endl;
   code_prototypeObjects();
+
+  if (cgen_debug) cout << "coding name table" << endl;
+  code_classNameTab();
+
 //                 Add your code to emit
-//                   - prototype objects
 //                   - class_nameTab
 //                   - dispatch tables
 //
@@ -861,6 +864,19 @@ std::vector<std::pair<CgenNode*, std::pair<int, int> > > CgenClassTable::getClas
     namesTagsSize.push_back({node, {tag, size}});
   }
   return namesTagsSize;
+}
+
+void CgenClassTable::code_classNameTab() {
+  str << CLASSNAMETAB << LABEL;
+
+  auto classes = this->getClassNodeTagAndSize();
+  for(auto classNodeTagSize : classes) {
+    auto classNode = classNodeTagSize.first;
+    StringEntry* stringEntry = stringtable.lookup_string(classNode->get_name()->get_string());
+    str << WORD;
+    stringEntry->code_ref(str);
+    str << endl;
+  }
 }
 
 int CgenNode::getSize() {
@@ -892,7 +908,7 @@ void CgenClassTable::code_prototypeObjects() {
 
 void CgenNode::code_prototypeObjects(ostream& str, int tag, int size) {
   if(cgen_debug) {
-    cout << "Gerando código da classe " << this->get_name() << endl;
+    cout << "Generating class code " << this->get_name() << endl;
   }
   // Adiciona o "eyecatcher"
   str << WORD << "-1" << endl;
