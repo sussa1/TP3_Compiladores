@@ -32,6 +32,7 @@ extern void emit_string_constant(ostream& str, char *s);
 extern int cgen_debug;
 
 std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassAttr;
+std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassMethod;
 
 //
 // Three symbols from the semantic analyzer (semant.cc) are used.
@@ -835,12 +836,10 @@ void CgenClassTable::code()
   code_prototypeObjects();
 
   if (cgen_debug) cout << "coding name table" << endl;
-  code_classNameTab();
+  code_classNameTable();
 
-//                 Add your code to emit
-//                   - class_nameTab
-//                   - dispatch tables
-//
+  if (cgen_debug) cout << "coding dispatch tables" << endl;
+  code_dispatchTables();
 
   if (cgen_debug) cout << "coding global text" << endl;
   code_global_text();
@@ -852,26 +851,66 @@ void CgenClassTable::code()
 
 }
 
-std::vector<std::pair<CgenNode*, std::pair<int, int> > > CgenClassTable::getClassNodeTagAndSize() {
+std::vector<CgenNode*> getClassNodes() {
   auto nodeList = this->nds;
-  int counterTag = 4;
-  std::vector<std::pair<CgenNode*, std::pair<int, int> > > namesTagsSize;
-  // Salva a tag e o nó de cada classe
+  std::vector<CgenNode*> classNodes;
+  // Salva os nós de todas as classes
   for(List<CgenNode>* list = nds; list != nullptr; list = list->tl()) {
     auto node = list->hd();
-    int tag = counterTag++;
-    int size = node->getSize();
-    namesTagsSize.push_back({node, {tag, size}});
+    classNode.push_back(node);
   }
-  return namesTagsSize;
+  return classNode;
 }
 
-void CgenClassTable::code_classNameTab() {
-  str << CLASSNAMETAB << LABEL;
 
-  auto classes = this->getClassNodeTagAndSize();
-  for(auto classNodeTagSize : classes) {
-    auto classNode = classNodeTagSize.first;
+void CgenClassTable::code_dispatchTables() {
+  auto classes = this->getClassNodes();
+  for(auto classNode : classes) {
+    classNode->code_dispatchTable();
+  }
+}
+
+std::map<Symbol, std::pair<Symbol, Symbol> > CgenNode::getFunctionsOfClass() {
+  auto currentNode = this;
+  auto parent = this->get_parentnd();
+  // Map para salvar a classe a qual cada função pertence, além do tipo de retorno da função
+  std::map<Symbol, std::pair<Symbol, Symbol> > functionClassMap;
+  while(currentNode != nullptr) {
+    auto features = currentNode->features;
+    for(int it = features->first(); features->more(it); it = features->next(it)) {
+      auto feature = features->nth(it);
+      // Feature é do tipo método
+      if(feature->type() == 1) {
+        method_class* method = (method_class*)feature;
+        if(functionClassMap.find(method->getName() == functionClassMap.end()) {
+          functionClassMap[method->getName()] = {method->getReturnType(), currentNode->get_name()};
+        }
+      }
+    }
+    parent = currentNode.get_parentnd();
+    currentNode = parent;
+  }
+  return functionClassMap;
+}
+
+void CgenNode::code_dispatchTable(ostream&& str) {
+  if(cgen_debug) {
+    cout << "Generating dispatch table of class " << this->get_name() << endl;
+  }
+  str << this->get_name() << DISPTAB_SUFFIX << LABEL;
+  // Map para salvar a classe a qual cada função pertence, além do tipo de retorno da função
+  auto functionClassMap = this->getFunctionsOfClass();
+  int offset = 0;
+  for(auto functionClass : functionClassMap) {
+    str << WORD << functionClass->s.f << METHOD_SEP << functionClass->f << endl;
+    typeOffsetClassMethod[functionClass->s.f][functionClass->f] = {functionClass->s.f, offset++};
+  }
+}
+
+void CgenClassTable::code_classNameTable() {
+  str << CLASSNAMETAB << LABEL;
+  auto classes = this->getClassNodes();
+  for(auto classNode : classes) {
     StringEntry* stringEntry = stringtable.lookup_string(classNode->get_name()->get_string());
     str << WORD;
     stringEntry->code_ref(str);
@@ -885,7 +924,7 @@ int CgenNode::getSize() {
   for(int it = features->first(); features->more(it); it = features->next(it)) {
     auto feature = features->nth(it);
     // Feature é do tipo atributo
-    if(feature->getType() == 1) {
+    if(feature->getType() == 0) {
       sizeClass++;
     }
   }
@@ -898,15 +937,29 @@ int CgenNode::getSize() {
   return sizeClass;
 }
 
+std::vector<std::pair<CgenNode*, std::pair<int, int> > > CgenClassTable::getClassNodeTagAndSize() {
+  auto nodes = getClassNodes();
+  int counterTag = 4;
+  std::vector<std::pair<CgenNode*, std::pair<int, int> > > namesTagsSize;
+  // Salva a tag, o nó e tamanho de cada classe
+  for(CgenNode* node : nodes)
+    int tag = counterTag++;
+    int size = node->getSize();
+    namesTagsSize.push_back({node, {tag, size}});
+  }
+  return namesTagsSize;
+}
+
 void CgenClassTable::code_prototypeObjects() {
   auto classes = this->getClassNodeTagAndSize();
   // Chama a geração de código do nó da classe
   for(auto classNode : classes) {
-    classNode.first->code_prototypeObjects(this->str, classNode.second.first, classNode.second.second);
+    classNode.first->code_prototypeObject(this->str, classNode.second.first, classNode.second.second);
+    typeOffsetClassMethod
   }
 }
 
-void CgenNode::code_prototypeObjects(ostream& str, int tag, int size) {
+void CgenNode::code_prototypeObject(ostream& str, int tag, int size) {
   if(cgen_debug) {
     cout << "Generating class code " << this->get_name() << endl;
   }
@@ -923,20 +976,20 @@ void CgenNode::code_prototypeObjects(ostream& str, int tag, int size) {
   // Adiciona os atributos, com offset inicial igual a 3, pois já existem outros
   // 3 campos de objetos padrões
   int offset = DEFAULT_OBJFIELDS;
-  this->code_attributesPrototypeObjects(str, offset);
+  this->code_attributesPrototypeObject(str, offset);
 }
 
-void CgenNode::code_attributesPrototypeObjects(ostream& str, int& offset) {
+void CgenNode::code_attributesPrototypeObject(ostream& str, int& offset) {
   // Gera os atributos do pai, caso tenha
   if(this->get_parentnd() != nullptr) {
-    this->get_parentnd() -> code_attributesPrototypeObjects(str, offset);
+    this->get_parentnd() -> code_attributesPrototypeObject(str, offset);
   }
 
   auto features = this->features;
   for(int it = features->first(); features->more(it); it = features->next(it)) {
     auto feature = features->nth(it);
     // Feature é do tipo atributo
-    if(feature->getType() == 1) {
+    if(feature->getType() == 0) {
       attr_class* attribute = (attr_class*)feature;
       auto typeAttribute = attribute->type_decl;
       // Salva o tipo e o offset de cada atributo

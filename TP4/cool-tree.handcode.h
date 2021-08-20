@@ -74,7 +74,7 @@ virtual int getType() = 0; // Retorna o tipo da feature
 
 // Adiciona getters para informações do método
 #define method_EXTRAS                                \
-    int getType() { return 0; }                 \
+    int getType() { return 1; }                 \
     Symbol getName() { return name; }               \
     Formals getFormals() { return formals; }        \
     Symbol getReturnType() { return return_type; } \
@@ -82,7 +82,7 @@ virtual int getType() = 0; // Retorna o tipo da feature
 
 // Adiciona getters para informações do atributo
 #define attr_EXTRAS                         \
-    int getType() { return 1; }			\
+    int getType() { return 0; }			\
     Symbol getName() { return name; }      \
     Expression getInit() { return init; }
 

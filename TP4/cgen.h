@@ -34,8 +34,10 @@ private:
    void code_select_gc();
    void code_constants();
    void code_prototypeObjects();
+   std::vector<CgenNode*> getClassNodes();
    std::vector<std::pair<CgenNode*, std::pair<int, int> > > getClassNodeTagAndSize();
-   void code_classNameTab();
+   void code_classNameTable();
+   void code_dispatchTables();
 
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as
@@ -74,9 +76,11 @@ public:
    
    // Métodos auxiliaries para a emissão de código
    // de constantes e declarações globais
-   void code_prototypeObjects(ostream& str, int tag, int size);
+   void code_prototypeObject(ostream& str, int tag, int size);
    int getSize();
-   void code_attributesPrototypeObjects(ostream& str, int& offset);
+   void code_attributesPrototypeObject(ostream& str, int& offset);
+   void code_dispatchTable(ostream& str);
+   std::map<Symbol, std::pair<Symbol, Symbol> > getFunctionsOfClass();
 };
 
 class BoolConst 
