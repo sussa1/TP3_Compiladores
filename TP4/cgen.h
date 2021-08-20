@@ -40,6 +40,7 @@ private:
    void code_classNameTable();
    void code_dispatchTables();
    void code_objectInitializer();
+   void code_classMethods();
 
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as
@@ -82,9 +83,11 @@ public:
    int getSize();
    void code_attributesPrototypeObject(ostream& str, int& offset);
    void code_dispatchTable(ostream& str);
-   std::map<Symbol, std::pair<Symbol, Symbol> > getFunctionsOfClass();
+   std::map<Symbol, std::pair<Symbol, Symbol> > getFunctionsOfClassForDispatch();
    void code_objectInitializer(ostream& str);
    void code_attributeInitializer(ostream& str);
+   void code_classMethods(ostream& str);
+   std::map<Symbol, std::pair<method_class*, Symbol> > getFunctionsOfClass();
 };
 
 class BoolConst 

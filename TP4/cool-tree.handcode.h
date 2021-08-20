@@ -76,15 +76,15 @@ virtual int getType() = 0; // Retorna o tipo da feature
 #define method_EXTRAS                                \
     int getType() { return 1; }                 \
     Symbol getName() { return name; }               \
-    Formals getFormals() { return formals; }        \
     Symbol getReturnType() { return return_type; } \
-    Expression getBody() { return expr; }
+    Expression getBody() {return expr; } /* Retorna atributo protected */ \
+    Formals getFormals() {return formals; } /* Retorna atributo protected */ \
 
 // Adiciona getters para informações do atributo
 #define attr_EXTRAS                         \
     int getType() { return 0; }			\
-    Symbol getName() { return name; }      \
-    Expression getInit() { return init; }
+    Symbol getName() { return name; } \
+    Expression getInit() {return init; } /* Retorna atributo protected */
 
 #define Feature_SHARED_EXTRAS                                       \
 void dump_with_types(ostream&,int);    

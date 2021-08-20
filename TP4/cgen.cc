@@ -847,9 +847,8 @@ void CgenClassTable::code()
   if (cgen_debug) cout << "coding object initializer" << endl;
   code_objectInitializer();
 
-//                 Add your code to emit
-//                   - the class methods
-//                   - etc...
+  if (cgen_debug) cout << "coding class methods" << endl;
+  code_classMethods();
 
 }
 
@@ -862,6 +861,80 @@ std::vector<CgenNode*> CgenClassTable::getClassNodes() {
     classNodes.push_back(node);
   }
   return classNodes;
+}
+
+void CgenClassTable::code_classMethods() {
+  auto classes = this->getClassNodes();
+  for(auto classNode : classes) {
+    // Se a classe não é Int, Bool nem String
+    if(!classNode->basic()) {
+      classNode->code_classMethods(str);
+    } 
+  }
+}
+
+std::map<Symbol, std::pair<method_class*, Symbol> > CgenNode::getFunctionsOfClass() {
+  auto currentNode = this;
+  auto parent = this->get_parentnd();
+  // Map para salvar a classe a qual cada função pertence, além do tipo de retorno da função
+  std::map<Symbol, std::pair<method_class*, Symbol> > functionClassMap;
+  while(currentNode != nullptr) {
+    auto features = currentNode->features;
+    for(int it = features->first(); features->more(it); it = features->next(it)) {
+      auto feature = features->nth(it);
+      // Feature é do tipo método
+      if(feature->getType() == 1) {
+        method_class* method = (method_class*)feature;
+        if(functionClassMap.find(method->getName()) == functionClassMap.end()) {
+          functionClassMap[method->getName()] = {method, currentNode->get_name()};
+        }
+      }
+    }
+    auto temp = currentNode->get_parentnd();
+    parent = currentNode->get_parentnd();
+    currentNode = temp;
+  }
+  return functionClassMap;
+}
+
+void CgenNode::code_classMethods(ostream& str) {
+  // Mapa de função para objeto method_class e símbolo da classe da função
+  auto functionMap = getFunctionsOfClass();
+  for(auto function : functionMap) {
+    method_class* method = function.second.first;
+    str << this->get_name() << METHOD_SEP << method->getName() << LABEL;
+    
+    // Executa um PUSH de fp, s0 e ra na pilha
+    emit_addiu(SP, SP, -12, s);
+    emit_store(FP, 3, SP, s);
+    emit_store(SELF, 2, SP, s);
+    emit_store(RA, 1, SP, s);
+    
+    // Coloca o fp para apontar para o endereço de retorno na pilha
+    emit_addiu(FP, SP, 4, s);
+
+    // Salva a0 no self
+    emit_move(SELF, ACC, str);
+
+    // Avalia a expressão do corpo do método
+    method->getBody()->code(str);
+
+    // Executa um POP de fp, s0 e ra na pilha
+    emit_load(FP, 3, SP, s);
+    emit_load(SELF, 2, SP, s);
+    emit_load(RA, 1, SP, s);
+    emit_addiu(SP, SP, 12, s);
+
+    // Conta o número de argumentos do método
+    int argsNumber = 0;
+    for(int it = method->getFormals()->first(); method->getFormals()->more(it); it = method->getFormals()->next(it)) {
+      argsNumber++;
+    }
+
+    // Faz o pop dos argumentos
+    emit_addiu(SP, SP, argsNumber * 4, str);
+    emit_return(str);
+  }
 }
 
 void CgenClassTable::code_objectInitializer() {
@@ -882,7 +955,7 @@ void CgenNode::code_attributeInitializer(ostream& str) {
       // Obtem o offset do atributo no prototype
       int offset = typeOffsetClassAttr[this->get_name()][attribute->getName()].second;
       // Se o atributo não possui inicialização
-      if(attribute->init->isNoExpr()) {
+      if(attribute->getInit()->isNoExpr()) {
         // Carrega o valor padrão da inicialização de cada tipo no a0
         if(attribute->type_decl == Bool) {
           emit_load_bool(ACC, BoolConst(0), str);
@@ -898,7 +971,7 @@ void CgenNode::code_attributeInitializer(ostream& str) {
       } else {
         // O atributo possui inicialização
         // Carrega o resultado do código de uma expression no a0
-        attribute->init->code(str);
+        attribute->getInit()->code(str);
         // Salva o resultado de a0 na posição correta
         emit_store(ACC, DEFAULT_OBJFIELDS + offset, SELF, str);
         // Gera informações para o coletor de lixo, caso ele esteja ativo
@@ -950,7 +1023,7 @@ void CgenClassTable::code_dispatchTables() {
   }
 }
 
-std::map<Symbol, std::pair<Symbol, Symbol> > CgenNode::getFunctionsOfClass() {
+std::map<Symbol, std::pair<Symbol, Symbol> > CgenNode::getFunctionsOfClassForDispatch() {
   auto currentNode = this;
   auto parent = this->get_parentnd();
   // Map para salvar a classe a qual cada função pertence, além do tipo de retorno da função
@@ -980,7 +1053,7 @@ void CgenNode::code_dispatchTable(ostream& str) {
   }
   str << this->get_name() << DISPTAB_SUFFIX << LABEL;
   // Map para salvar a classe a qual cada função pertence, além do tipo de retorno da função
-  auto functionClassMap = this->getFunctionsOfClass();
+  auto functionClassMap = this->getFunctionsOfClassForDispatch();
   int offset = 0;
   for(auto functionClass : functionClassMap) {
     str << WORD << functionClass.second.first << METHOD_SEP << functionClass.first << endl;
