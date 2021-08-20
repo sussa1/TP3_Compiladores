@@ -149,3 +149,19 @@ Instruções
 [Aqui começa sua documentação]
 
 Colocamos comentários em portugues, mas o código e debug estão em ingles.
+
+Delegou a geração de código para os CgenNodes, fazendo o CgenClassTable chamar
+métodos do CgenNodes.
+
+
+Falando dos offsets:
+std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassAttr; Define offset e tipo dos atributos das classes
+std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassMethod; Define offset e retorno dos métodos das classes
+std::map<Symbol, CgenNode*> classNodeMap; Salva o Nó de uma classe de acordo com seu símbolo, usado para atualizar currentNode ao chamar
+métodos de outras classes
+
+
+Falando do estado:
+O estado de um programa é salvo na pilha, sendo que elementsInStack conta os elementos na pilha e symbolTable salva o índice de
+um dado símbolo, para possibilitar acessá-lo na pilha. currentClass salva o nó da classe que contém o código sendo analisado no momento.
+Symbol table contém variáveis locais e argumentos, já a currentClass é usada para métodos.

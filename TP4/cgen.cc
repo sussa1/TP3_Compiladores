@@ -33,6 +33,11 @@ extern int cgen_debug;
 
 std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassAttr;
 std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassMethod;
+std::map<Symbol, CgenNode*> classNodeMap;
+
+std::map<Symbol, vector<int> > symbolTable;
+int elementsInStack = 0;
+CgenNode* currentClass;
 
 //
 // Three symbols from the semantic analyzer (semant.cc) are used.
@@ -909,7 +914,8 @@ void CgenNode::code_classMethods(ostream& str) {
     str << this->get_name() << METHOD_SEP << method->getName() << LABEL;
     
     // Executa um PUSH de fp, s0 e ra na pilha
-    emit_addiu(SP, SP, -12, str);
+    elementsInStack+=3;
+    emit_addiu(SP, SP, -3*WORD_SIZE, str);
     emit_store(FP, 3, SP, str);
     emit_store(SELF, 2, SP, str);
     emit_store(RA, 1, SP, str);
@@ -920,6 +926,8 @@ void CgenNode::code_classMethods(ostream& str) {
     // Salva a0 no self
     emit_move(SELF, ACC, str);
 
+    // Coloca os parâmetros na pilha
+
     // Avalia a expressão do corpo do método
     method->getBody()->code(str);
 
@@ -927,16 +935,10 @@ void CgenNode::code_classMethods(ostream& str) {
     emit_load(FP, 3, SP, str);
     emit_load(SELF, 2, SP, str);
     emit_load(RA, 1, SP, str);
-    emit_addiu(SP, SP, 12, str);
+    emit_addiu(SP, SP, 3*WORD_SIZE, str);
+    elementsInStack-=3;
 
-    // Conta o número de argumentos do método
-    int argsNumber = 0;
-    for(int it = method->getFormals()->first(); method->getFormals()->more(it); it = method->getFormals()->next(it)) {
-      argsNumber++;
-    }
-
-    // Faz o pop dos argumentos
-    emit_addiu(SP, SP, argsNumber * 4, str);
+    // Retorna do método
     emit_return(str);
   }
 }
@@ -944,6 +946,7 @@ void CgenNode::code_classMethods(ostream& str) {
 void CgenClassTable::code_objectInitializer() {
   auto classes = this->getClassNodes();
   for(auto classNode : classes) {
+    currentClass = classNode;
     classNode->code_objectInitializer(str);
   }
 }
@@ -991,7 +994,8 @@ void CgenNode::code_attributeInitializer(ostream& str) {
 void CgenNode::code_objectInitializer(ostream& str) {
   str << this->get_name() << CLASSINIT_SUFFIX << LABEL;
   // Executa PUSH de fp, seguido de s0, seguido de ra
-  emit_addiu(SP, SP, -12, str);
+  emit_addiu(SP, SP, -3*WORD_SIZE, str);
+  elementsInStack+=3;
   emit_store(FP, 3, SP, str);
   emit_store(SELF, 2, SP, str);
   emit_store(RA, 1, SP, str);
@@ -1013,9 +1017,10 @@ void CgenNode::code_objectInitializer(ostream& str) {
   emit_move(ACC, SELF, str);
   // Executa POP de fp, seguido de s0, seguido de ra
   emit_load(FP, 3, SP, str);
+  elementsInStack-=3;
   emit_load(SELF, 2, SP, str);
   emit_load(RA, 1, SP, str);
-  emit_addiu(SP, SP, 12, str);
+  emit_addiu(SP, SP, 3*WORD_SIZE, str);
   // Executa o retorno da inicialização
   emit_return(str);
 }
@@ -1023,6 +1028,7 @@ void CgenNode::code_objectInitializer(ostream& str) {
 void CgenClassTable::code_dispatchTables() {
   auto classes = this->getClassNodes();
   for(auto classNode : classes) {
+    currentClass = classNode;
     classNode->code_dispatchTable(str);
   }
 }
@@ -1112,6 +1118,7 @@ void CgenClassTable::code_prototypeObjects() {
   auto classes = this->getClassNodeTagAndSize();
   // Chama a geração de código do nó da classe
   for(auto classNode : classes) {
+    classNodeMap[classNode.first->get_name()] = classNode.first;
     classNode.first->code_prototypeObject(this->str, classNode.second.first, classNode.second.second);
   }
 }
@@ -1206,58 +1213,80 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
 //
 //*****************************************************************
 
-void assign_class::code(ostream &s) {
+int getStackOffset(Symbol name, ostream& s) {
+  if(symbolTable.find(this->name) == symbolTable.end()) {
+    s << "ERRO" << endl;
+    return -1;
+  }
+  int stackIndex = symbolTable[name].back();
+  // Calcula o offset com base no numero de elementos na pilha
+  // e o índice do símbolo
+  int offset = (elementsInStack-1-stackIndex);
+  return offset;
 }
 
-void static_dispatch_class::code(ostream &s) {
+void assign_class::code(ostream &s, CgenNode* classNode) {
+  // Avalia a expressão a ser atribuída
+  this->expr->code(s);
+  // Busca a variável para ser alterada
+  int offset = getStackOffset(this->name, s);
+  emit_store(ACC, offset, SP, s);
+  // Tratamento do garbage collector
+  if(cgen_Memmgr) {
+    emit_addiu(A1, FP, 4*(offset), s);
+    emit_jal("_GenGC_Assign", s);
+  }
 }
 
-void dispatch_class::code(ostream &s) {
+void static_dispatch_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void cond_class::code(ostream &s) {
+void dispatch_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void loop_class::code(ostream &s) {
+void cond_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void typcase_class::code(ostream &s) {
+void loop_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void block_class::code(ostream &s) {
+void typcase_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void let_class::code(ostream &s) {
+void block_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void plus_class::code(ostream &s) {
+void let_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void sub_class::code(ostream &s) {
+void plus_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void mul_class::code(ostream &s) {
+void sub_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void divide_class::code(ostream &s) {
+void mul_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void neg_class::code(ostream &s) {
+void divide_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void lt_class::code(ostream &s) {
+void neg_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void eq_class::code(ostream &s) {
+void lt_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void leq_class::code(ostream &s) {
+void eq_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void comp_class::code(ostream &s) {
+void leq_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void int_const_class::code(ostream& s)  
+void comp_class::code(ostream &s, CgenNode* classNode) {
+}
+
+void int_const_class::code(ostream& s, CgenNode* classNode)  
 {
   //
   // Need to be sure we have an IntEntry *, not an arbitrary Symbol
@@ -1265,26 +1294,26 @@ void int_const_class::code(ostream& s)
   emit_load_int(ACC,inttable.lookup_string(token->get_string()),s);
 }
 
-void string_const_class::code(ostream& s)
+void string_const_class::code(ostream& s, CgenNode* classNode)
 {
   emit_load_string(ACC,stringtable.lookup_string(token->get_string()),s);
 }
 
-void bool_const_class::code(ostream& s)
+void bool_const_class::code(ostream& s, CgenNode* classNode)
 {
   emit_load_bool(ACC, BoolConst(val), s);
 }
 
-void new__class::code(ostream &s) {
+void new__class::code(ostream &s, CgenNode* classNode) {
 }
 
-void isvoid_class::code(ostream &s) {
+void isvoid_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void no_expr_class::code(ostream &s) {
+void no_expr_class::code(ostream &s, CgenNode* classNode) {
 }
 
-void object_class::code(ostream &s) {
+void object_class::code(ostream &s, CgenNode* classNode) {
 }
 
 
