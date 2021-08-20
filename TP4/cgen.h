@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <algorithm>
+#include <vector>
 #include "emit.h"
 #include "cool-tree.h"
 #include "symtab.h"
@@ -74,7 +75,7 @@ public:
    // de constantes e declarações globais
    void code_prototypeObjects(ostream& str, int tag, int size);
    int getSize();
-   void code_attributesPrototypeObjects(ostream& str, int& offset)
+   void code_attributesPrototypeObjects(ostream& str, int& offset);
 };
 
 class BoolConst 

@@ -69,8 +69,21 @@ void dump_with_types(ostream&,int);
 
 
 #define Feature_EXTRAS                                        \
-virtual void dump_with_types(ostream&,int) = 0; 
+virtual void dump_with_types(ostream&,int) = 0; 		\
+virtual int getType(); // Retorna o tipo da feature
 
+#define method_EXTRAS                                \
+    int getType() { return 0; }                 \
+    Symbol getName() { return name; }               \
+    Formals getFormals() { return formals; }        \
+    Symbol getReturnType() { return return_type; } \
+    Expression getBodyExpression() { return expr; }
+
+#define attr_EXTRAS                         \
+    int getType() { return 1; }			\
+    Symbol getName() { return name; }      \
+    Symbol getType() { return type_decl; } \
+    Expression getInitExpression() { return init; }
 
 #define Feature_SHARED_EXTRAS                                       \
 void dump_with_types(ostream&,int);    

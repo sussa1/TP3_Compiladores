@@ -26,6 +26,7 @@
 #include "cgen_gc.h"
 #include <algorithm>
 #include <map>
+#include <vector>
 
 extern void emit_string_constant(ostream& str, char *s);
 extern int cgen_debug;
@@ -853,13 +854,13 @@ void CgenClassTable::code()
 std::vector<std::pair<CgenNode*, std::pair<int, int> > > CgenClassTable::getClassNodeTagAndSize() {
   auto nodeList = this->nds;
   int counterTag = 4;
-  vector<std::pair<CgenNode*, std::pair<int, int> > > namesTagsSize;
+  std::vector<std::pair<CgenNode*, std::pair<int, int> > > namesTagsSize;
   // Salva a tag e o nó de cada classe
   for(List<CgenNode>* list = nds; list != nullptr; list = list->tl()) {
     auto node = list->hd();
     int tag = counterTag++;
     int size = node->getSize();
-    namesTagsSize.pb({node, {tag, size}});
+    namesTagsSize.push_back({node, {tag, size}});
   }
   return namesTagsSize;
 }
@@ -870,7 +871,7 @@ int CgenNode::getSize() {
   for(int it = features->first(); features->more(it); it = features->next(it)) {
     auto feature = features->nth(it);
     // Feature é do tipo atributo
-    if(feature->type() == 1) {
+    if(feature->getType() == 1) {
       sizeClass++;
     }
   }
@@ -904,7 +905,8 @@ void CgenNode::code_prototypeObjects(ostream& str, int tag, int size) {
   str << WORD << this->get_name() << DISPTAB_SUFFIX << endl;
   // Adiciona os atributos, com offset inicial igual a 3, pois já existem outros
   // 3 campos de objetos padrões
-  this->code_attributesPrototypeObjects(str, 3);
+  int offset = DEFAULT_OBJFIELDS;
+  this->code_attributesPrototypeObjects(str, offset);
 }
 
 void CgenNode::code_attributesPrototypeObjects(ostream& str, int& offset) {
@@ -917,13 +919,13 @@ void CgenNode::code_attributesPrototypeObjects(ostream& str, int& offset) {
   for(int it = features->first(); features->more(it); it = features->next(it)) {
     auto feature = features->nth(it);
     // Feature é do tipo atributo
-    if(feature->type() == 1) {
+    if(feature->getType() == 1) {
       attr_class* attribute = (attr_class*)feature;
       auto typeAttribute = attribute->type_decl;
       // Salva o tipo e o offset de cada atributo
-      typeOffsetClassAttr[this->get_name()][attribute->get_name()] = {typeAttribute, offset++};
+      typeOffsetClassAttr[this->get_name()][attribute->getName()] = {typeAttribute, offset++};
       // Gera o código que inicializa os atributos
-      if(typeAttribute == String) {
+      if(typeAttribute == Str) {
         str << WORD;
         stringtable.lookup_string("")->code_ref(str);
         str << endl;
