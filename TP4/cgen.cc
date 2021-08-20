@@ -867,11 +867,11 @@ std::vector<CgenNode*> CgenClassTable::getClassNodes() {
 void CgenClassTable::code_objectInitializer() {
   auto classes = this->getClassNodes();
   for(auto classNode : classes) {
-    class_node->code_objectInitializer(str);
+    classNode->code_objectInitializer(str);
   }
 }
 
-CgenNode::code_attributeInitializer(ostream& str) {
+void CgenNode::code_attributeInitializer(ostream& str) {
   // Inicializa os atributos da classe
   auto features = this->features;
   for(int it = features->first(); features->more(it); it = features->next(it)) {
@@ -879,7 +879,8 @@ CgenNode::code_attributeInitializer(ostream& str) {
     // Feature é do tipo atributo
     if(feature->getType() == 0) {
       attr_class* attribute = (attr_class*)feature;
-      int attributeOffset = typeOffsetClassAttr[this->get_name()][attribute->getName()].s;
+      // Obtem o offset do atributo no prototype
+      int offset = typeOffsetClassAttr[this->get_name()][attribute->getName()].second;
       // Se o atributo não possui inicialização
       if(attribute->init->isNoExpr()) {
         // Carrega o valor padrão da inicialização de cada tipo no a0
@@ -910,7 +911,7 @@ CgenNode::code_attributeInitializer(ostream& str) {
   }
 }
 
-CgenNode::code_objectInitializer(ostream& str) {
+void CgenNode::code_objectInitializer(ostream& str) {
   str << this->get_name() << CLASSINIT_SUFFIX << LABEL;
   // Executa PUSH de fp, seguido de s0, seguido de ra
   emit_addiu(SP, SP, -12, str);
