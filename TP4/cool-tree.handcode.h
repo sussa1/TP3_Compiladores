@@ -113,11 +113,14 @@ Expression set_type(Symbol s) { type = s; return this; } \
 virtual void code(ostream&) = 0; \
 virtual void dump_with_types(ostream&,int) = 0;  \
 void dump_type(ostream&, int);               \
+virtual bool isNoExpr() {return false;} \ // Adiciona método para verificar se a expressão é vazia
 Expression_class() { type = (Symbol) NULL; }
 
 #define Expression_SHARED_EXTRAS           \
 void code(ostream&); 			   \
 void dump_with_types(ostream&,int); 
 
+#define no_expr_EXTRAS \
+bool isNoExpr() {return true;} // Verifica se a expressão é vazia
 
 #endif

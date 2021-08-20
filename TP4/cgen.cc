@@ -844,8 +844,10 @@ void CgenClassTable::code()
   if (cgen_debug) cout << "coding global text" << endl;
   code_global_text();
 
+  if (cgen_debug) cout << "coding object initializer" << endl;
+  code_objectInitializer();
+
 //                 Add your code to emit
-//                   - object initializer
 //                   - the class methods
 //                   - etc...
 
@@ -862,6 +864,83 @@ std::vector<CgenNode*> getClassNodes() {
   return classNode;
 }
 
+void CgenClassTable::code_objectInitializer() {
+  auto classes = this->getClassNodes();
+  for(auto classNode : classes) {
+    class_node->code_objectInitializer(str);
+  }
+}
+
+CgenNode::code_attributeInitializer(ostream& str) {
+  // Inicializa os atributos da classe
+  auto features = this->features;
+  for(int it = features->first(); features->more(it); it = features->next(it)) {
+    auto feature = features->nth(it);
+    // Feature é do tipo atributo
+    if(feature->getType() == 0) {
+      attr_class* attribute = (attr_class*)feature;
+      int attributeOffset = typeOffsetClassAttr[this->get_name()][attribute->getName()].s;
+      // Se o atributo não possui inicialização
+      if(attribute->init->isNoExpr()) {
+        // Carrega o valor padrão da inicialização de cada tipo no a0
+        if(attribute->type_decl == Bool) {
+          emit_load_bool(ACC, BoolConst(0), str);
+        } else if(attribute->type_decl == Int) {
+          IntEntry* zeroEntry = inttable.lookup_string("0");
+          emit_load_int(ACC, zeroEntry, str);
+        } else if(attribute->type_decl == Str) {
+          StringEntry* emptyEntry = stringtable.lookup_string("");
+          emit_load_string(ACC, emptyEntry, str);
+        }
+        // Salva o valor carregado na posição correta da memória
+        emit_store(ACC, DEFAULT_OBJFIELDS + offset, SELF, str);
+      } else {
+        // O atributo possui inicialização
+        // Carrega o resultado do código de uma expression no a0
+        attribute->init->code(str);
+        // Salva o resultado de a0 na posição correta
+        emit_store(ACC, DEFAULT_OBJFIELDS + offset, SELF, str);
+        // Gera informações para o coletor de lixo, caso ele esteja ativo
+        if(cgen_Memmgr) {
+          emit_addiu(A1, SELF, 4*(offset * DEFAULT_OBJFIELDS), str);
+          emit_jal("_GenGC_Assign", str);
+        }
+      }
+    }
+  }
+}
+
+CgenNode::code_objectInitializer(ostream& str) {
+  str << this->get_name() << CLASSINIT_SUFFIX << LABEL;
+  // Executa PUSH de fp, seguido de s0, seguido de ra
+  emit_addiu(SP, SP, -12, str);
+  emit_store(FP, 3, SP, str);
+  emit_store(SELF, 2, SP, str);
+  emit_store(RA, 1, SP, str);
+  // Faz com que fp aponte para o endereço de retorno na pilha
+  emit_addiu(FP, SP, 4, str);
+  // Faz com que o registrador self seja igual a a0, pois como explicado
+  // no cool-runtime, o objeto self é passado no registrador a0
+  emit_move(SELF, ACC, str);
+  // Roda o inicializar na classe mãe
+  if(this->get_parentnd() != nullptr) {
+    str << JAL;
+    emit_init_ref(this->get_parentnd()->get_name(), str);
+    str << endl;
+  }
+  // Inicializa os atributos
+  this->code_attributeInitializer(str);
+  // Retorna da inicialização
+  // Salva o self no a0
+  emit_move(ACC, SELF, str);
+  // Executa POP de fp, seguido de s0, seguido de ra
+  emit_load(FP, 3, SP, str);
+  emit_load(SELF, 2, SP, str);
+  emit_load(RA, 1, SP, str);
+  emit_addiu(SP, SP, 12, str);
+  // Executa o retorno da inicialização
+  emit_return(str);
+}
 
 void CgenClassTable::code_dispatchTables() {
   auto classes = this->getClassNodes();

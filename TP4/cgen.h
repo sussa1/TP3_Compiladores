@@ -38,6 +38,7 @@ private:
    std::vector<std::pair<CgenNode*, std::pair<int, int> > > getClassNodeTagAndSize();
    void code_classNameTable();
    void code_dispatchTables();
+   void code_objectInitializer();
 
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as
@@ -81,6 +82,8 @@ public:
    void code_attributesPrototypeObject(ostream& str, int& offset);
    void code_dispatchTable(ostream& str);
    std::map<Symbol, std::pair<Symbol, Symbol> > getFunctionsOfClass();
+   void code_objectInitializer(ostream& str);
+   void code_attributeInitializer(ostream& str);
 };
 
 class BoolConst 
