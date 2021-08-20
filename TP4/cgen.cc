@@ -909,13 +909,13 @@ void CgenNode::code_classMethods(ostream& str) {
     str << this->get_name() << METHOD_SEP << method->getName() << LABEL;
     
     // Executa um PUSH de fp, s0 e ra na pilha
-    emit_addiu(SP, SP, -12, s);
-    emit_store(FP, 3, SP, s);
-    emit_store(SELF, 2, SP, s);
-    emit_store(RA, 1, SP, s);
+    emit_addiu(SP, SP, -12, str);
+    emit_store(FP, 3, SP, str);
+    emit_store(SELF, 2, SP, str);
+    emit_store(RA, 1, SP, str);
     
     // Coloca o fp para apontar para o endereço de retorno na pilha
-    emit_addiu(FP, SP, 4, s);
+    emit_addiu(FP, SP, 4, str);
 
     // Salva a0 no self
     emit_move(SELF, ACC, str);
@@ -924,10 +924,10 @@ void CgenNode::code_classMethods(ostream& str) {
     method->getBody()->code(str);
 
     // Executa um POP de fp, s0 e ra na pilha
-    emit_load(FP, 3, SP, s);
-    emit_load(SELF, 2, SP, s);
-    emit_load(RA, 1, SP, s);
-    emit_addiu(SP, SP, 12, s);
+    emit_load(FP, 3, SP, str);
+    emit_load(SELF, 2, SP, str);
+    emit_load(RA, 1, SP, str);
+    emit_addiu(SP, SP, 12, str);
 
     // Conta o número de argumentos do método
     int argsNumber = 0;
