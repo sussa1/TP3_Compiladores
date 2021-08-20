@@ -853,15 +853,15 @@ void CgenClassTable::code()
 
 }
 
-std::vector<CgenNode*> getClassNodes() {
+std::vector<CgenNode*> CgenClassTable::getClassNodes() {
   auto nodeList = this->nds;
   std::vector<CgenNode*> classNodes;
   // Salva os nós de todas as classes
-  for(List<CgenNode>* list = nds; list != nullptr; list = list->tl()) {
+  for(List<CgenNode>* list = nodeList; list != nullptr; list = list->tl()) {
     auto node = list->hd();
-    classNode.push_back(node);
+    classNodes.push_back(node);
   }
-  return classNode;
+  return classNodes;
 }
 
 void CgenClassTable::code_objectInitializer() {
@@ -945,7 +945,7 @@ CgenNode::code_objectInitializer(ostream& str) {
 void CgenClassTable::code_dispatchTables() {
   auto classes = this->getClassNodes();
   for(auto classNode : classes) {
-    classNode->code_dispatchTable();
+    classNode->code_dispatchTable(str);
   }
 }
 
@@ -959,20 +959,21 @@ std::map<Symbol, std::pair<Symbol, Symbol> > CgenNode::getFunctionsOfClass() {
     for(int it = features->first(); features->more(it); it = features->next(it)) {
       auto feature = features->nth(it);
       // Feature é do tipo método
-      if(feature->type() == 1) {
+      if(feature->getType() == 1) {
         method_class* method = (method_class*)feature;
-        if(functionClassMap.find(method->getName() == functionClassMap.end()) {
+        if(functionClassMap.find(method->getName()) == functionClassMap.end()) {
           functionClassMap[method->getName()] = {method->getReturnType(), currentNode->get_name()};
         }
       }
     }
-    parent = currentNode.get_parentnd();
-    currentNode = parent;
+    auto temp = currentNode->get_parentnd();
+    parent = currentNode->get_parentnd();
+    currentNode = temp;
   }
   return functionClassMap;
 }
 
-void CgenNode::code_dispatchTable(ostream&& str) {
+void CgenNode::code_dispatchTable(ostream& str) {
   if(cgen_debug) {
     cout << "Generating dispatch table of class " << this->get_name() << endl;
   }
@@ -981,8 +982,8 @@ void CgenNode::code_dispatchTable(ostream&& str) {
   auto functionClassMap = this->getFunctionsOfClass();
   int offset = 0;
   for(auto functionClass : functionClassMap) {
-    str << WORD << functionClass->s.f << METHOD_SEP << functionClass->f << endl;
-    typeOffsetClassMethod[functionClass->s.f][functionClass->f] = {functionClass->s.f, offset++};
+    str << WORD << functionClass.second.first << METHOD_SEP << functionClass.first << endl;
+    typeOffsetClassMethod[functionClass.second.first][functionClass.first] = {functionClass.second.first, offset++};
   }
 }
 
@@ -1021,7 +1022,7 @@ std::vector<std::pair<CgenNode*, std::pair<int, int> > > CgenClassTable::getClas
   int counterTag = 4;
   std::vector<std::pair<CgenNode*, std::pair<int, int> > > namesTagsSize;
   // Salva a tag, o nó e tamanho de cada classe
-  for(CgenNode* node : nodes)
+  for(CgenNode* node : nodes) {
     int tag = counterTag++;
     int size = node->getSize();
     namesTagsSize.push_back({node, {tag, size}});
@@ -1034,7 +1035,6 @@ void CgenClassTable::code_prototypeObjects() {
   // Chama a geração de código do nó da classe
   for(auto classNode : classes) {
     classNode.first->code_prototypeObject(this->str, classNode.second.first, classNode.second.second);
-    typeOffsetClassMethod
   }
 }
 

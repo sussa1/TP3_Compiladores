@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <algorithm>
 #include <vector>
+#include <map>
 #include "emit.h"
 #include "cool-tree.h"
 #include "symtab.h"
