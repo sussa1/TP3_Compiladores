@@ -1261,7 +1261,7 @@ void assign_class::code(ostream &s) {
   }
 }
 
-std::vector<int> loadAttributesInStack(Symbol caleeType, std::map<Symbol, std::vector<int> >& symbolTable, ostream& s) {
+std::vector<int> loadAttributesInStack(Symbol caleeType, ostream& s) {
   std::vector<int> ret;
   // Atributos da classe
   auto mapAttrTypeOffset = offsetClassAttr[caleeType];
@@ -1280,7 +1280,7 @@ std::vector<int> loadAttributesInStack(Symbol caleeType, std::map<Symbol, std::v
   return ret;
 }
 
-std::vector<int> loadParametersInStack(Expressions actuals, Symbol methodSymbol, std::map<Symbol, std::vector<int> >& symbolTable, ostream& s) {
+std::vector<int> loadParametersInStack(Expressions actuals, Symbol methodSymbol, ostream& s) {
   std::vector<int> ret;
   // Percorre os parâmetros
   for(int it = actuals->first(); actuals->more(it); it = actuals->next(it)) {
@@ -1316,8 +1316,6 @@ void unloadDataInStack(std::vector<int> indexes, ostream& s) {
 int labelId = 0;
 
 void static_dispatch_class::code(ostream &s) {
-  // Salva valor antigo para novo escopo
-  int oldElementsInStack = elementsInStack;
   // Carrega o offset do método chamado
   int offset = methodOffsetClassMethod[this->type_name][this->name].second.first;
   Symbol className = methodOffsetClassMethod[this->type_name][this->name].second.second;
@@ -1331,6 +1329,10 @@ void static_dispatch_class::code(ostream &s) {
   // Salva a posição do a0
   int positionACC = elementsInStack;
   elementsInStack++;
+  // Atualiza o escopo
+  // Cria um novo escopo para o novo método chamado
+  // Esse escopo começa com os parâmetros do método
+  scopes.push_back(elementsInStack);
    // Carregar atributos do objeto na memória
   auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
   // Percorre os parâmetros e os adiciona na pilha
@@ -1347,10 +1349,6 @@ void static_dispatch_class::code(ostream &s) {
   emit_jal("_dispatch_abort", s);
   // Coloca o label para o objeto diferente de void
   emit_label_def(labelId++, s);
-  // Atualiza o escopo
-  // Cria um novo escopo para o novo método chamado
-  // Esse escopo começa com os parâmetros do método
-  scopes.push_back(oldElementsInStack);
   // Carrega o endereço do método na tabela de dispatch
   std::string address = className->get_string();
   address+= METHOD_SEP;
@@ -1373,8 +1371,6 @@ void static_dispatch_class::code(ostream &s) {
 }
 
 void dispatch_class::code(ostream &s) {
-  // Salva valor antigo para novo escopo
-  int oldElementsInStack = elementsInStack;
   // Verifica se o método chamado é de um objeto ou da classe atual
   Symbol className = currentClass->get_name();
   if(expr->get_type() != SELF_TYPE) {
@@ -1400,6 +1396,10 @@ void dispatch_class::code(ostream &s) {
   // Salva a posição do a0
   int positionACC = elementsInStack;
   elementsInStack++;
+  // Atualiza o escopo
+  // Cria um novo escopo para o novo método chamado
+  // Esse escopo começa com os parâmetros do método
+  scopes.push_back(elementsInStack);
    // Carregar atributos do objeto na memória
   auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
   // Percorre os parâmetros e os adiciona na pilha
@@ -1416,10 +1416,6 @@ void dispatch_class::code(ostream &s) {
   emit_jal("_dispatch_abort", s);
   // Coloca o label para o objeto diferente de void
   emit_label_def(labelId++, s);
-  // Atualiza o escopo
-  // Cria um novo escopo para o novo método chamado
-  // Esse escopo começa com os parâmetros do método
-  scopes.push_back(oldElementsInStack);
   // Carrega o endereço do método na tabela de dispatch
   std::string address = methodClassName->get_string();
   address+= METHOD_SEP;
