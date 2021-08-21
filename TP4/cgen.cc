@@ -882,6 +882,8 @@ std::vector<CgenNode*> CgenClassTable::getClassNodes() {
 }
 
 void CgenClassTable::code_classPrototypeTable() {
+  // Adiciona o "eyecatcher"
+  str << WORD << "-1" << endl;
   str << "classPrototypeTable" << LABEL;
   auto classes = this->getClassNodes();
   // Cria a tabela sendo que para cada classe temos duas entradas
@@ -1015,6 +1017,8 @@ void CgenNode::code_attributeInitializer(ostream& str) {
 }
 
 void CgenNode::code_objectInitializer(ostream& str) {
+  // Adiciona o "eyecatcher"
+  str << WORD << "-1" << endl;
   str << this->get_name() << CLASSINIT_SUFFIX << LABEL;
   // Executa PUSH de fp, seguido de s0, seguido de ra
   emit_push(FP, str);
@@ -1060,6 +1064,8 @@ void CgenNode::code_dispatchTable(ostream& str) {
   if(cgen_debug) {
     cout << "Generating dispatch table of class " << this->get_name() << endl;
   }
+  // Adiciona o "eyecatcher"
+  str << WORD << "-1" << endl;
   str << this->get_name() << DISPTAB_SUFFIX << LABEL;
   // Map para salvar a classe a qual cada função pertence, além do tipo de retorno da função
   auto functionClassMap = this->getFunctionsOfClass();
@@ -1071,6 +1077,8 @@ void CgenNode::code_dispatchTable(ostream& str) {
 }
 
 void CgenClassTable::code_classNameTable() {
+  // Adiciona o "eyecatcher"
+  str << WORD << "-1" << endl;
   str << CLASSNAMETAB << LABEL;
   auto classes = this->getClassNodes();
   for(auto classNode : classes) {
