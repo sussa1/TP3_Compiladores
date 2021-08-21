@@ -1322,6 +1322,10 @@ void static_dispatch_class::code(ostream &s) {
   // Atualiza currentClass
   auto oldClass = currentClass;
   currentClass = classNodeMap[this->type_name];
+   // Carregar atributos do objeto na memória
+  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
+  // Percorre os parâmetros e os adiciona na pilha
+  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
   // Avalia o objeto
   expr->code(s);
   // Verifica se o objeto é void
@@ -1334,10 +1338,6 @@ void static_dispatch_class::code(ostream &s) {
   emit_jal("_dispatch_abort", s);
   // Coloca o label para o objeto diferente de void
   emit_label_def(labelId++, s);
-  // Carregar atributos do objeto na memória
-  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
-  // Percorre os parâmetros e os adiciona na pilha
-  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
   // Carrega o endereço do método na tabela de dispatch
   std::string address = className->get_string();
   address+= METHOD_SEP;
@@ -1370,6 +1370,10 @@ void dispatch_class::code(ostream &s) {
   // Atualiza currentClass
   auto oldClass = currentClass;
   currentClass = classNodeMap[className];
+  // Carregar atributos do objeto na memória
+  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
+  // Percorre os parâmetros e os adiciona na pilha
+  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
   // Avalia o objeto
   expr->code(s);
   // Verifica se o objeto é void
@@ -1382,10 +1386,6 @@ void dispatch_class::code(ostream &s) {
   emit_jal("_dispatch_abort", s);
   // Coloca o label para o objeto diferente de void
   emit_label_def(labelId++, s);
-  // Carregar atributos do objeto na memória
-  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
-  // Percorre os parâmetros e os adiciona na pilha
-  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
   // Carrega o endereço do método na tabela de dispatch
   std::string address = methodClassName->get_string();
   address+= METHOD_SEP;
