@@ -1500,8 +1500,26 @@ void let_class::code(ostream &s) {
   this->init->code(s);
   if(this->init->isNoExpr()) {
     // Carrega os valores padrões caso seja um tipo básico
-    if(this->type); // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    if(this->type_decl == Int) {
+      emit_load_int(ACC, inttable.lookup_string("0"), s);
+    } else if (this->type_decl == Bool) {
+      emit_load_bool(ACC, BoolConst(0), s);
+    } else { // String
+      emit_load_string(ACC, stringtable.lookup_string(""), s);
+    }
   }
+  // Coloca o identificador do let na pilha e na tabela de símbolos
+  int indexVariable = elementsInStack;
+  emit_push(ACC, s);
+  symbolTable[this->identifier].push_back(elementsInStack);
+  reverseSymbolTable[elementsInStack] = this->identifier;
+  elementsInStack++;
+  // Avalia a expressão do let
+  this->body->code(s);
+  // Remove o identificador da pilha e da tabela de símbolos
+  emit_addiu(SP, SP, WORD_SIZE, s);
+  elementsInStack--;
+  symbolTable[reverseSymbolTable[indexVariable]].pop_back();
 }
 
 void plus_class::code(ostream &s) {

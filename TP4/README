@@ -174,3 +174,8 @@ std::map<int, Symbol> reverseSymbolTable; usada para poder remover simbolos da t
 
 
 labelId mantém um id unico para definir labels distintas
+
+Foi decidido que em casos de erros (que não deveria acontecer, já que existe uma analisador semântico antes) nosso código gera um string "ERRO" no assembly,
+que deverá gerar erros ao executar o código gerado.
+
+Alteramos o segundo parametro do emit_load_address para receber um const char * ao invés de char*
