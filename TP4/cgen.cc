@@ -1383,6 +1383,7 @@ void dispatch_class::code(ostream &s) {
   auto oldClass = currentClass;
   currentClass = classNodeMap[className];
   s << "#####" << expr->get_type() << ": " << this->line_number << endl;
+  s << "#: " << symbolTable.size() << endl;
   for(auto p : symbolTable) {
     if(p.second.empty()) continue;
     s << "#" << p.first << " -> " << p.second.back() << endl;
