@@ -1268,7 +1268,7 @@ std::vector<int> loadAttributesInStack(Symbol caleeType, ostream& s) {
   for(auto attrTypeOffset : mapAttrTypeOffset) {
     // Salva em T1 o endereço do atributo do objeto na memória
     // Lembrando que ACC contém um ponteiro para o objeto
-    emit_addiu(T1, ACC, attrTypeOffset.second, s);
+    emit_addiu(T1, ACC, WORD_SIZE*attrTypeOffset.second, s);
     // Coloca na pilha o endereço do atributo
     emit_push(T1, s);
     // Salva o atributo na tabela de símbolos
