@@ -1076,9 +1076,10 @@ void CgenNode::code_dispatchTable(ostream& str) {
 
 void CgenClassTable::code_classNameTable() {
   // Adiciona o "eyecatcher"
-  str << WORD << "-1" << endl;
   str << CLASSNAMETAB << LABEL;
   auto classes = this->getClassNodes();
+  // Coloca na mesma ordem do coolc
+  std::reverse(classes.begin(), classes.end());
   for(auto classNode : classes) {
     StringEntry* stringEntry = stringtable.lookup_string(classNode->get_name()->get_string());
     str << WORD;
