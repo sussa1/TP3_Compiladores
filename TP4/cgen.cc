@@ -882,8 +882,6 @@ std::vector<CgenNode*> CgenClassTable::getClassNodes() {
 }
 
 void CgenClassTable::code_classPrototypeTable() {
-  // Adiciona o "eyecatcher"
-  str << WORD << "-1" << endl;
   str << "classPrototypeTable" << LABEL;
   auto classes = this->getClassNodes();
   // Cria a tabela sendo que para cada classe temos duas entradas
