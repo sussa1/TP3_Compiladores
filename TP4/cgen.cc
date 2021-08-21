@@ -1317,7 +1317,7 @@ int labelId = 0;
 
 void static_dispatch_class::code(ostream &s) {
   // Salva valor antigo para novo escopo
-  int oldElementsInStack = elementsInStack
+  int oldElementsInStack = elementsInStack;
   // Carrega o offset do método chamado
   int offset = methodOffsetClassMethod[this->type_name][this->name].second.first;
   Symbol className = methodOffsetClassMethod[this->type_name][this->name].second.second;
@@ -1326,9 +1326,9 @@ void static_dispatch_class::code(ostream &s) {
   currentClass = classNodeMap[this->type_name];
   auto symbolTableCopy = symbolTable;
    // Carregar atributos do objeto na memória
-  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), &symbolTableCopy, s);
+  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), symbolTableCopy, s);
   // Percorre os parâmetros e os adiciona na pilha
-  auto addedParametersIndexes = loadParametersInStack(this->actual, &symbolTableCopy, this->name, s);
+  auto addedParametersIndexes = loadParametersInStack(this->actual,this->name, symbolTableCopy, s);
   // Avalia o objeto
   expr->code(s);
   // Verifica se o objeto é void
@@ -1368,7 +1368,7 @@ void static_dispatch_class::code(ostream &s) {
 
 void dispatch_class::code(ostream &s) {
   // Salva valor antigo para novo escopo
-  int oldElementsInStack = elementsInStack
+  int oldElementsInStack = elementsInStack;
   // Verifica se o método chamado é de um objeto ou da classe atual
   Symbol className = currentClass->get_name();
   if(expr->get_type() != SELF_TYPE) {
@@ -1382,9 +1382,9 @@ void dispatch_class::code(ostream &s) {
   currentClass = classNodeMap[className];
   auto symbolTableCopy = symbolTable;
    // Carregar atributos do objeto na memória
-  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), &symbolTableCopy, s);
+  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), symbolTableCopy, s);
   // Percorre os parâmetros e os adiciona na pilha
-  auto addedParametersIndexes = loadParametersInStack(this->actual, &symbolTableCopy, this->name, s);
+  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, symbolTableCopy, s);
   s << "#####" << expr->get_type() << ": " << this->line_number << endl;
   for(auto p : symbolTable) {
     if(p.second.empty()) continue;
