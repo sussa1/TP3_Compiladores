@@ -1017,8 +1017,6 @@ void CgenNode::code_attributeInitializer(ostream& str) {
 }
 
 void CgenNode::code_objectInitializer(ostream& str) {
-  // Adiciona o "eyecatcher"
-  str << WORD << "-1" << endl;
   str << this->get_name() << CLASSINIT_SUFFIX << LABEL;
   // Executa PUSH de fp, seguido de s0, seguido de ra
   emit_push(FP, str);
