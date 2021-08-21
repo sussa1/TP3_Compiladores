@@ -1317,7 +1317,7 @@ int labelId = 0;
 
 void static_dispatch_class::code(ostream &s) {
   // Salva valor antigo para novo escopo
-  int oldElementsInStack = elementsInStack
+  int oldElementsInStack = elementsInStack;
   // Carrega o offset do método chamado
   int offset = methodOffsetClassMethod[this->type_name][this->name].second.first;
   Symbol className = methodOffsetClassMethod[this->type_name][this->name].second.second;
@@ -1374,7 +1374,7 @@ void static_dispatch_class::code(ostream &s) {
 
 void dispatch_class::code(ostream &s) {
   // Salva valor antigo para novo escopo
-  int oldElementsInStack = elementsInStack
+  int oldElementsInStack = elementsInStack;
   // Verifica se o método chamado é de um objeto ou da classe atual
   Symbol className = currentClass->get_name();
   if(expr->get_type() != SELF_TYPE) {
