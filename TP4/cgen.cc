@@ -888,7 +888,7 @@ void CgenClassTable::code_classPrototypeTable() {
   // A primeira indica o prototype e a segunda indica o init
   for(auto classNode : classes) {
     str << WORD << classNode->get_name() << PROTOBJ_SUFFIX << endl;
-    str << classNode->get_name() << CLASSINIT_SUFFIX << endl;
+    str << WORD << classNode->get_name() << CLASSINIT_SUFFIX << endl;
   }
 }
 
@@ -897,9 +897,11 @@ void CgenClassTable::code_classMethods() {
   for(auto classNode : classes) {
     // Se a classe não é Int, Bool nem String
     if(!classNode->basic()) {
+      currentClass = classNode;
       classNode->code_classMethods(str);
     } 
   }
+  currentClass = classes[0];
 }
 
 std::map<Symbol, std::pair<method_class*, Symbol> > CgenNode::getFunctionsOfClass() {
@@ -930,6 +932,7 @@ void CgenNode::code_classMethods(ostream& str) {
   // Mapa de função para objeto method_class e símbolo da classe da função
   auto functionMap = getFunctionsOfClass();
   for(auto function : functionMap) {
+    if(function.second.second != this->get_name()) continue;
     method_class* method = function.second.first;
     str << this->get_name() << METHOD_SEP << method->getName() << LABEL;
     
@@ -968,6 +971,7 @@ void CgenClassTable::code_objectInitializer() {
     currentClass = classNode;
     classNode->code_objectInitializer(str);
   }
+  currentClass = classes[0];
 }
 
 void CgenNode::code_attributeInitializer(ostream& str) {
@@ -1023,7 +1027,8 @@ void CgenNode::code_objectInitializer(ostream& str) {
   // no cool-runtime, o objeto self é passado no registrador a0
   emit_move(SELF, ACC, str);
   // Roda o inicializar na classe mãe
-  if(this->get_parentnd() != nullptr) {
+  // Se o nó for o Object
+  if(this->get_parentnd()->name != No_class) {
     str << JAL;
     emit_init_ref(this->get_parentnd()->get_name(), str);
     str << endl;
@@ -1060,8 +1065,8 @@ void CgenNode::code_dispatchTable(ostream& str) {
   auto functionClassMap = this->getFunctionsOfClass();
   int offset = 0;
   for(auto functionClass : functionClassMap) {
-    str << WORD << functionClass.second.first << METHOD_SEP << functionClass.first << endl;
-    methodOffsetClassMethod[functionClass.second.second][functionClass.first] = {functionClass.second.first, offset++};
+    str << WORD << functionClass.second.second << METHOD_SEP << functionClass.first << endl;
+    methodOffsetClassMethod[this->get_name()][functionClass.first] = {functionClass.second.first, offset++};
   }
 }
 
@@ -1282,6 +1287,7 @@ std::vector<int> loadParametersInStack(Expressions actuals, Symbol methodSymbol,
     // Coloca seu resultado na pilha
     emit_push(ACC, s);
     // Salva o parâmetro na tabela de símbolos
+    if(cgen_debug) {cout << currentClass->get_name() << methodSymbol << endl; }
     auto methodOffset = methodOffsetClassMethod[currentClass->get_name()][methodSymbol];
     Symbol parameterName = methodOffset.first->formals->nth(it)->getName();
     symbolTable[parameterName].push_back(elementsInStack);
@@ -1307,8 +1313,14 @@ void static_dispatch_class::code(ostream &s) {
   // Cria um novo escopo para o novo método chamado
   // Esse escopo começa com os parâmetros do método
   scopes.push_back(elementsInStack);
+  // Carrega o offset do método chamado
+  Symbol className = this->type_name;
+  int offset = methodOffsetClassMethod[className][this->name].second;
+  // Atualiza currentClass
+  auto oldClass = currentClass;
+  currentClass = classNodeMap[className];
   // Percorre os parâmetros e os adiciona na pilha
-  auto addedParametersIndexes = loadParametersInStack(this->actual, this->get_type(), s);
+  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
   // Avalia o objeto
   expr->code(s);
   // Verifica se o objeto é void
@@ -1323,16 +1335,10 @@ void static_dispatch_class::code(ostream &s) {
   emit_label_def(labelId++, s);
   // Carregar atributos do objeto na memória
   auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
-  // Carrega o offset do método chamado
-  Symbol className = this->type_name;
-  int offset = methodOffsetClassMethod[className][this->name].second;
-  // Atualiza currentClass
-  auto oldClass = currentClass;
-  currentClass = classNodeMap[className];
   // Carrega o endereço do método na tabela de dispatch
   std::string address = className->get_string();
   address+= METHOD_SEP;
-  address+= this->get_type()->get_string();
+  address+= this->name->get_string();
   emit_load_address(T1, address.c_str(), s);
   // Chama o método
   emit_jalr(T1, s);
@@ -1350,8 +1356,18 @@ void dispatch_class::code(ostream &s) {
   // Cria um novo escopo para o novo método chamado
   // Esse escopo começa com os parâmetros do método
   scopes.push_back(elementsInStack);
+  // Verifica se o método chamado é de um objeto ou da classe atual
+  Symbol className = currentClass->get_name();
+  if(expr->get_type() != SELF_TYPE) {
+    className = expr->get_type();
+  }
+  // Carrega o offset do método chamado
+  int offset = methodOffsetClassMethod[className][this->name].second;
+  // Atualiza currentClass
+  auto oldClass = currentClass;
+  currentClass = classNodeMap[className];
   // Percorre os parâmetros e os adiciona na pilha
-  auto addedParametersIndexes = loadParametersInStack(this->actual, this->get_type(), s);
+  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
   // Avalia o objeto
   expr->code(s);
   // Verifica se o objeto é void
@@ -1366,20 +1382,10 @@ void dispatch_class::code(ostream &s) {
   emit_label_def(labelId++, s);
   // Carregar atributos do objeto na memória
   auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
-  // Verifica se o método chamado é de um objeto ou da classe atual
-  Symbol className = currentClass->get_name();
-  if(expr->get_type() != SELF_TYPE) {
-    className = expr->get_type();
-  }
-  // Carrega o offset do método chamado
-  int offset = methodOffsetClassMethod[className][this->name].second;
-  // Atualiza currentClass
-  auto oldClass = currentClass;
-  currentClass = classNodeMap[className];
   // Carrega o endereço do método na tabela de dispatch
   std::string address = className->get_string();
   address+= METHOD_SEP;
-  address+= this->get_type()->get_string();
+  address+= this->name->get_string();
   emit_load_address(T1, address.c_str(), s);
   // Chama o método
   emit_jalr(T1, s);

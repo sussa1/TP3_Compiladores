@@ -3,8 +3,9 @@
     as possible.
  *)
 
-class Main {
-  main():Int { 0 };
-  test:Int <- 0;
+class Main inherits IO {
+  main(): Int {{
+  	out_string("oi"); in_int(); 0; 
+  }};
 };
 
