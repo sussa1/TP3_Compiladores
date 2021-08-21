@@ -1293,7 +1293,9 @@ std::vector<int> loadParametersInStack(Expressions actuals, Symbol methodSymbol,
     if(cgen_debug) {cout << currentClass->get_name() << methodSymbol << endl; }
     auto methodOffset = methodOffsetClassMethod[currentClass->get_name()][methodSymbol];
     Symbol parameterName = methodOffset.first->formals->nth(it)->getName();
-    cout << parameterName << endl;
+    if(cgen_debug) {
+      cout << parameterName << endl;
+    }
     symbolTable[parameterName].push_back(elementsInStack);
     reverseSymbolTable[elementsInStack]= parameterName;
     ret.push_back(elementsInStack);
