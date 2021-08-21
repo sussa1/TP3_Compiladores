@@ -1376,7 +1376,7 @@ void dispatch_class::code(ostream &s) {
   auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
   // Percorre os parâmetros e os adiciona na pilha
   auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
-  s << "#####" << expr->get_type() << endl;
+  s << "#####" << expr->get_type() << ": " << this->line_number << endl;
   // Avalia o objeto
   expr->code(s);
   s << "#####" << expr->get_type() << endl;
