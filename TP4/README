@@ -161,6 +161,10 @@ std::map<Symbol, CgenNode*> classNodeMap; Salva o Nó de uma classe de acordo co
 métodos de outras classes
 
 
+Foi criado um método code_classPrototypeTable para gerar uma tabela que indexa de acordo com a tag o endereço do prototype da classe que
+possui a tag. Para ajudar nisso, foi criada um map classesByTag que mapeia uma tag para um CgenNode*. Essa tabela é necessária para implementar
+o new do SELF_TYPE
+
 Falando do estado:
 O estado de um programa é salvo na pilha, sendo que elementsInStack conta os elementos na pilha e symbolTable salva o índice de
 um dado símbolo, para possibilitar acessá-lo na pilha. currentClass salva o nó da classe que contém o código sendo analisado no momento.

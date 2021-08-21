@@ -34,6 +34,7 @@ extern int cgen_debug;
 std::map<Symbol, std::map<Symbol, int > > offsetClassAttr;
 std::map<Symbol, std::map<Symbol, std::pair<method_class*, int> > > methodOffsetClassMethod;
 std::map<Symbol, CgenNode*> classNodeMap;
+map<int, CgenNode*> classesByTag;
 
 std::map<Symbol, std::vector<int> > symbolTable;
 std::map<int, Symbol> reverseSymbolTable;
@@ -849,6 +850,12 @@ void CgenClassTable::code()
   if (cgen_debug) cout << "coding name table" << endl;
   code_classNameTable();
 
+  // Tabela criada para possibilitar o uso do SELF_TYPE
+  // Essa tabela possui uma referência a cada prototype de um objeto
+  // Dada sua classtag
+  if (cgen_debug) cout << "coding class prototype table" << endl;
+  code_classPrototypeTable();
+
   if (cgen_debug) cout << "coding dispatch tables" << endl;
   code_dispatchTables();
 
@@ -872,6 +879,17 @@ std::vector<CgenNode*> CgenClassTable::getClassNodes() {
     classNodes.push_back(node);
   }
   return classNodes;
+}
+
+void CgenClassTable::code_classPrototypeTable() {
+  str << "classPrototypeTable" << LABEL;
+  auto classes = this->getClassNodes();
+  // Cria a tabela sendo que para cada classe temos duas entradas
+  // A primeira indica o prototype e a segunda indica o init
+  for(auto classNode : classes) {
+    str << WORD << classNode.s->get_name() << PROTOBJ_SUFFIX << endl;
+    str << classNode.s->get_name() << CLASSINIT_SUFFIX << endl;
+  }
 }
 
 void CgenClassTable::code_classMethods() {
@@ -1083,9 +1101,30 @@ std::vector<std::pair<CgenNode*, std::pair<int, int> > > CgenClassTable::getClas
   std::vector<std::pair<CgenNode*, std::pair<int, int> > > namesTagsSize;
   // Salva a tag, o nó e tamanho de cada classe
   for(CgenNode* node : nodes) {
-    int tag = counterTag++;
-    int size = node->getSize();
-    namesTagsSize.push_back({node, {tag, size}});
+    if(!node->basic()) {
+      // Salva a classe dada pela tag atual
+      classesByTag[tag] = node;
+      int tag = counterTag++;
+      int size = node->getSize();
+      namesTagsSize.push_back({node, {tag, size}});
+    } else {
+      if(node->name == Bool) {
+        int size = node->getSize();
+        namesTagsSize.push_back({node, {3, size}});
+        // Salva a classe dada pela tag atual
+        classesByTag[3] = node;
+      } else if(node->name == Int) {
+        int size = node->getSize();
+        namesTagsSize.push_back({node, {2, size}});
+        // Salva a classe dada pela tag atual
+        classesByTag[2] = node;
+      } else { // String
+        int size = node->getSize();
+        namesTagsSize.push_back({node, {1, size}});
+        // Salva a classe dada pela tag atual
+        classesByTag[1] = node;
+      }
+    }
   }
   return namesTagsSize;
 }
@@ -1105,7 +1144,7 @@ void CgenNode::code_prototypeObject(ostream& str, int tag, int size) {
   }
   // Adiciona o "eyecatcher"
   str << WORD << "-1" << endl;
-  // Adiciona a tag do garbage collector
+  // Adiciona a tag do prototype
   str << this->get_name() << PROTOBJ_SUFFIX << LABEL;
   // Adiciona a tag da classe
   str << WORD << tag << endl;
@@ -1189,11 +1228,7 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
 //
 //*****************************************************************
 
-int getStackOffset(Symbol name, ostream& s) {
-  if(symbolTable.find(name) == symbolTable.end() || symbolTable[name] < scope.back()) {
-    s << "ERRO" << endl;
-    return -1;
-  }
+int getStackOffset(Symbol name) {
   int stackIndex = symbolTable[name].back();
   // Calcula o offset com base no numero de elementos na pilha
   // e o índice do símbolo
@@ -1204,8 +1239,12 @@ int getStackOffset(Symbol name, ostream& s) {
 void assign_class::code(ostream &s) {
   // Avalia a expressão a ser atribuída
   this->expr->code(s);
+  if(symbolTable.find(name) == symbolTable.end() || symbolTable[name] < scope.back()) {
+    s << "ERRO" << endl;
+    return -1;
+  }
   // Busca a variável para ser alterada
-  int offset = getStackOffset(this->name, s);
+  int offset = getStackOffset(this->name);
   emit_store(ACC, offset, SP, s);
   // Tratamento do garbage collector
   if(cgen_Memmgr) {
@@ -1293,7 +1332,7 @@ void static_dispatch_class::code(ostream &s) {
   // Carrega o endereço do método na tabela de dispatch
   std::string address = className->get_string();
   address+= METHOD_SEP;
-  address+= this->get_type().get_string();
+  address+= this->get_type()->get_string();
   emit_load_address(T1, addr.c_str(), s);
   // Chama o método
   emit_jalr(T1, s);
@@ -1319,7 +1358,8 @@ void dispatch_class::code(ostream &s) {
   emit_bne(ACC, ZERO, labelId, s);
   // Carrega o nome do programa em a0
   emit_load_address(ACC, "str_const0", s);
-  // Deixa lixo na linha retornada, pois não temos essa informação
+  // Carrega a linha no registrador T1
+  emit_load_imm(T1, this->line_number, s);
   // Aborta com o procedimento correto
   emit_jal("_dispatch_abort", s);
   // Coloca o label para o objeto diferente de void
@@ -1339,7 +1379,7 @@ void dispatch_class::code(ostream &s) {
   // Carrega o endereço do método na tabela de dispatch
   std::string address = className->get_string();
   address+= METHOD_SEP;
-  address+= this->get_type().get_string();
+  address+= this->get_type()->get_string();
   emit_load_address(T1, addr.c_str(), s);
   // Chama o método
   emit_jalr(T1, s);
@@ -1393,13 +1433,66 @@ void loop_class::code(ostream &s) {
 }
 
 void typcase_class::code(ostream &s) {
-  // TODO
+  // Avalia a expressão do case
+  this->expr->code(s);
+  int labelExprValida = labelId++;
+  // Se a expressão do case for void, aborta chamando o procedimento correto
+  emit_bne(ACC, ZERO, labelExprValida, s);
+  // Carrega o nome do arquivo no a0
+  emit_load_address(ACC, "str_const0", s);
+  // Carrega a linha no registrador t1
+  emit_load_imm(T1, this->line_number, s);
+  // Chama o procedimento para abortar
+  emit_jal("_case_abort2", s);
+  // Define a label da expressão válida
+  emit_label_def(labelExprValida, s);
+  // Carrega o objeto em T1
+  emit_load(T1, 0, ACC, s);
+  // Código para checar os cases
+  std::vector<std::pair<int, branch_class*> > labelsMatches;
+  for (int it = this->cases->first(); this->cases->more(it); it = this->cases->next(it)) {
+    auto caseObj = this->cases->nth(it);
+    branch_class* branch = (branch_class*) caseObj;
+    // Faz o match da expressão com o tipo do case
+    // Carrega em T2 a tag da classe desse match
+    emit_load_address(T2, caseObj->type_decl->get_string(), s);
+    // Se as tags do match e da expressão forem iguais, vai para o trecho
+    // que executa o código do match
+    emit_beq(T1, T2, labelId);
+    labelsMatches.push_back({labelId++, branch});
+  }
+  int labelEndCaseWithMatch = labelId++;
+  for(auto labelMatch : labelsMatches) {
+    emit_label_def(labelMatch.f, s);
+    // Adiciona a variável do match na pilha e na tabela de símbolos
+    // Copia o objeto resultado da expressão do match (que está em a0)
+    emit_jal("Object.copy", s);
+    // Salva o resultado da cópia na pilha e na tabela de símbolos
+    int indexVariable = elementsInStack;
+    emit_push(ACC, s);
+    symbolTable[labelMatch.s->name].push_back(elementsInStack);
+    reverseSymbolTable[elementsInStack] = labelMatch.s->name;
+    elementsInStack++;
+    labelMatch.s->expr->code(s);
+    // Remove o resultado da cópia da pilha
+    emit_addiu(SP, SP, WORD_SIZE, s);
+    elementsInStack--;
+    symbolTable[reverseSymbolTable[indexVariable]].pop_back();
+    // Vai para a label de fim do case
+    emit_branch(labelEndCaseWithMatch, s);
+  }
+  // Executa o procedimento para abortar o case caso não tenha match
+  // Nesse caso o ACC já contém o tipo da expressão do case
+  emit_jal("_case_abort", s);
+  emit_branch(finish, s);
+  // Define a label que identifica um case que finalizou corretamente
+  emit_label_def(labelEndCaseWithMatch, s);
 }
 
 void block_class::code(ostream &s) {
   // Gera o código de todos elementos do corpo, retornando o último
-  for (int it = body->first(); body->more(it); it = body->next(it)) {
-    body->nth(it)->code(s);
+  for (int it = this->body->first(); this->body->more(it); it = this->body->next(it)) {
+    this->body->nth(it)->code(s);
   }
 }
 
@@ -1698,7 +1791,42 @@ void bool_const_class::code(ostream& s)
 }
 
 void new__class::code(ostream &s) {
-  // TODO
+  if (this->type_name == SELF_TYPE) {
+        // Salva em T1 o endereço da tabela de classes
+        emit_load_address(T1, "classPrototypeTable", s);
+        // Salva em T2 a tag da classe self
+        emit_load(T2, 0, SELF, s);
+        T1 + 2*T2*WORD_SIZE
+        // Busca a entrada da tabela que possui o prototipo do objeto
+        // Faz T2*2
+        emit_add(T2, T2, T2, s);
+        // Faz T2*4
+        emit_sll(T2, T2, 2, s);
+        // Salva em T3 o endereço da linha da tabela de classes
+        emit_add(T3, T1, T2, s);
+        // Salva em ACC a referência para o prototype da classe
+        emit_load(ACC, 0, T3, s);
+        // Copia para ACC uma cópia do objeto
+        emit_jal("Object.copy", s);
+        // Carrega a referência ao init, que é a próxima linha da tabela
+        emit_load(T3, 1, T3, s);
+        // Executa o init
+        emit_jalr(T3, s);
+    } else {
+      // Salva a label do prototype da classe
+      std::string classType = this->type_name->get_string();
+      dest += PROTOBJ_SUFFIX;
+      // Carrega em a0 o endereço do prototype
+      emit_load_address(ACC, dest.c_str(), s);
+      // Copia o objeto
+      emit_jal("Object.copy", s);
+      // Salva a label do init da classe
+      dest = type_name->get_string();
+      dest += CLASSINIT_SUFFIX;
+      // Inicializa o objeto
+      emit_jal(dest.c_str(), s);
+    }
+
 }
 
 void isvoid_class::code(ostream &s) {
@@ -1729,7 +1857,24 @@ void no_expr_class::code(ostream &s) {
 }
 
 void object_class::code(ostream &s) {
-  // TODO
+  // Verifica se o objeto existe na tabela de símbolos
+  if(symbolTable.find(this->name) != symbolTable.end()) {
+    int offset = getStackOffset(this->name);
+    // Salva o objeto em a0
+    emit_store(ACC, offset, SP, s);
+    // Tratamento do garbage collector
+    if(cgen_Memmgr) {
+      emit_addiu(A1, FP, 4*(offset), s);
+      emit_jal("_GenGC_Assign", s);
+    }
+  } else {
+    if(name == self) {
+      // O objeto é o self, logo salva SELF em a0
+      emit_move(ACC, SELF, s);
+    } else {
+      s << "Erro!" << endl;
+    }
+  }
 }
 
 
