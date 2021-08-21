@@ -32,7 +32,7 @@ extern void emit_string_constant(ostream& str, char *s);
 extern int cgen_debug;
 
 std::map<Symbol, std::map<Symbol, int > > offsetClassAttr;
-std::map<Symbol, std::map<Symbol, std::pair<method_class*, int> > > methodOffsetClassMethod;
+std::map<Symbol, std::map<Symbol, std::pair<method_class*, std::pair<int, Symbol> > > > methodOffsetClassMethod;
 std::map<Symbol, CgenNode*> classNodeMap;
 std::map<int, CgenNode*> classesByTag;
 
@@ -1066,7 +1066,7 @@ void CgenNode::code_dispatchTable(ostream& str) {
   int offset = 0;
   for(auto functionClass : functionClassMap) {
     str << WORD << functionClass.second.second << METHOD_SEP << functionClass.first << endl;
-    methodOffsetClassMethod[this->get_name()][functionClass.first] = {functionClass.second.first, offset++};
+    methodOffsetClassMethod[this->get_name()][functionClass.first] = {functionClass.second.first, {offset++, functionClass.second.second}};
   }
 }
 
@@ -1314,8 +1314,8 @@ void static_dispatch_class::code(ostream &s) {
   // Esse escopo começa com os parâmetros do método
   scopes.push_back(elementsInStack);
   // Carrega o offset do método chamado
-  int offset = methodOffsetClassMethod[this->type_name][this->name].second;
-  Symbol className = methodOffsetClassMethod[this->type_name][this->name].first;
+  int offset = methodOffsetClassMethod[this->type_name][this->name].second.first;
+  Symbol className = methodOffsetClassMethod[this->type_name][this->name].second.second;
   // Atualiza currentClass
   auto oldClass = currentClass;
   currentClass = classNodeMap[this->type_name];
@@ -1362,8 +1362,8 @@ void dispatch_class::code(ostream &s) {
     className = expr->get_type();
   }
   // Carrega o offset do método chamado
-  int offset = methodOffsetClassMethod[className][this->name].second;
-  Symbol methodClassName = methodOffsetClassMethod[className][this->name].first;
+  int offset = methodOffsetClassMethod[className][this->name].second.first;
+  Symbol methodClassName = methodOffsetClassMethod[className][this->name].second.second;
   // Atualiza currentClass
   auto oldClass = currentClass;
   currentClass = classNodeMap[className];
