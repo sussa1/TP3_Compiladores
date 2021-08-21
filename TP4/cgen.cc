@@ -1314,11 +1314,11 @@ void static_dispatch_class::code(ostream &s) {
   // Esse escopo começa com os parâmetros do método
   scopes.push_back(elementsInStack);
   // Carrega o offset do método chamado
-  Symbol className = this->type_name;
-  int offset = methodOffsetClassMethod[className][this->name].second;
+  int offset = methodOffsetClassMethod[this->type_name][this->name].second;
+  Symbol className = methodOffsetClassMethod[this->type_name][this->name].first;
   // Atualiza currentClass
   auto oldClass = currentClass;
-  currentClass = classNodeMap[className];
+  currentClass = classNodeMap[this->type_name];
   // Percorre os parâmetros e os adiciona na pilha
   auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
   // Avalia o objeto
@@ -1363,6 +1363,7 @@ void dispatch_class::code(ostream &s) {
   }
   // Carrega o offset do método chamado
   int offset = methodOffsetClassMethod[className][this->name].second;
+  Symbol methodClassName = methodOffsetClassMethod[className][this->name].first;
   // Atualiza currentClass
   auto oldClass = currentClass;
   currentClass = classNodeMap[className];
@@ -1383,7 +1384,7 @@ void dispatch_class::code(ostream &s) {
   // Carregar atributos do objeto na memória
   auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
   // Carrega o endereço do método na tabela de dispatch
-  std::string address = className->get_string();
+  std::string address = methodClassName->get_string();
   address+= METHOD_SEP;
   address+= this->name->get_string();
   emit_load_address(T1, address.c_str(), s);

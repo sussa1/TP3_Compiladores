@@ -167,10 +167,12 @@ o new do SELF_TYPE
 
 Falando do estado:
 O estado de um programa é salvo na pilha, sendo que elementsInStack conta os elementos na pilha e symbolTable salva o índice de
-um dado símbolo, para possibilitar acessá-lo na pilha. currentClass salva o nó da classe que contém o código sendo analisado no momento.
+um dado símbolo, para possibilitar acessá-lo na pilha. currentClass salva o nó da classe que contém o código sendo analisado no momento. Essa variável
+é atualizada ao gerar o código para inicializar objetos e o código dos métodos dos objetos. Após a geração ela é setada para a Main.
 Symbol table contém variáveis locais e argumentos, já a currentClass é usada para métodos. O vetor scopes guarda os índices dos primeiros símbolos
 de cada escopo. A mudança de escopo acontece ao chamar um método.
 std::map<int, Symbol> reverseSymbolTable; usada para poder remover simbolos da tabela de simbolos
+Implementamos a nossa própria tabela de símbolos por acharmos mais simples fazer dessa forma
 
 
 labelId mantém um id unico para definir labels distintas
