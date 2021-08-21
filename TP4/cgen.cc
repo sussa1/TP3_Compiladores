@@ -953,6 +953,17 @@ void CgenNode::code_classMethods(ostream& str) {
     // Avalia a expressão do corpo do método
     method->getBody()->code(str);
 
+    // Realiza o pop dos argumentos da pilha, pois o calee é responsável por dar os pops
+
+    for(int it = this->formals->first(); this->formals->more(it); it = this->formals->next(it)) {
+      auto parameterName = this->formals->nth(it)->getName();
+      emit_addiu(SP, SP, WORD_SIZE, s);
+      elementsInStack--;
+      reverseSymbolTable[symbolTable[parameterName].back()].pop_back();
+      symbolTable[parameterName].pop_back();
+      symbolTable[parameterName].push_back(elementsInStack);
+    }
+
     // Executa um POP de fp, s0 e ra na pilha
     emit_load(FP, 3, SP, str);
     emit_load(SELF, 2, SP, str);
@@ -1359,12 +1370,8 @@ void static_dispatch_class::code(ostream &s) {
   emit_jalr(T1, s);
   // Atualiza currentClass
   currentClass = oldClass;
-  // Remove os parâmetros e novos atributos do estado e volta ao escopo antigo
+  // Remove os novos atributos do estado e volta ao escopo antigo
   scopes.pop_back();
-  if(address != "IO.out_string" && address != "IO.out_int") {
-    // Remove os parâmetros da pilha
-    unloadDataInStack(addedParametersIndexes, s);
-  }
   // Remove os atributos da pilha
   unloadDataInStack(addedAttributesIndexes, s);
   // Desempilha o a0
@@ -1427,13 +1434,8 @@ void dispatch_class::code(ostream &s) {
   emit_jalr(T1, s);
   // Atualiza currentClass
   currentClass = oldClass;
-  // Remove os parâmetros e novos atributos do estado e volta ao escopo antigo
+  // Remove os novos atributos do estado e volta ao escopo antigo
   scopes.pop_back();
-  // Essas funções dão pop no argumento dentro delas
-  if(address != "IO.out_string" && address != "IO.out_int") {
-    // Remove os parâmetros da pilha
-    unloadDataInStack(addedParametersIndexes, s);
-  }
   // Remove os atributos da pilha
   unloadDataInStack(addedAttributesIndexes, s);
 }

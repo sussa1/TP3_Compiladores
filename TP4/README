@@ -181,3 +181,5 @@ Foi decidido que em casos de erros (que não deveria acontecer, já que existe u
 que deverá gerar erros ao executar o código gerado.
 
 Alteramos o segundo parametro do emit_load_address para receber um const char * ao invés de char*
+
+Os calees fazem o pop dos argumentos
