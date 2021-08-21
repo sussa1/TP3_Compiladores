@@ -1324,13 +1324,19 @@ void static_dispatch_class::code(ostream &s) {
   // Atualiza currentClass
   auto oldClass = currentClass;
   currentClass = classNodeMap[this->type_name];
-  auto symbolTableCopy = symbolTable;
-   // Carregar atributos do objeto na memória
-  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), &symbolTableCopy, s);
-  // Percorre os parâmetros e os adiciona na pilha
-  auto addedParametersIndexes = loadParametersInStack(this->actual, &symbolTableCopy, this->name, s);
   // Avalia o objeto
   expr->code(s);
+  // Emitir o push
+  emit_push(ACC, s);
+  // Salva a posição do a0
+  int positionACC = elementsInStack;
+  elementsInStack++;
+   // Carregar atributos do objeto na memória
+  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
+  // Percorre os parâmetros e os adiciona na pilha
+  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
+  // Carrega o a0 da expressão
+  emit_load(ACC, (elementsInStack-1-positionACC), SP, s);
   // Verifica se o objeto é void
   emit_bne(ACC, ZERO, labelId, s);
   // Carrega o nome do programa em a0
@@ -1345,8 +1351,6 @@ void static_dispatch_class::code(ostream &s) {
   // Cria um novo escopo para o novo método chamado
   // Esse escopo começa com os parâmetros do método
   scopes.push_back(oldElementsInStack);
-  // Atualiza a tabela de símbolos
-  symbolTable = symbolTableCopy;
   // Carrega o endereço do método na tabela de dispatch
   std::string address = className->get_string();
   address+= METHOD_SEP;
@@ -1364,6 +1368,8 @@ void static_dispatch_class::code(ostream &s) {
   }
   // Remove os atributos da pilha
   unloadDataInStack(addedAttributesIndexes, s);
+  // Desempilha o a0
+  emit_addiu(SP, SP, WORD_SIZE, s);
 }
 
 void dispatch_class::code(ostream &s) {
@@ -1380,11 +1386,6 @@ void dispatch_class::code(ostream &s) {
   // Atualiza currentClass
   auto oldClass = currentClass;
   currentClass = classNodeMap[className];
-  auto symbolTableCopy = symbolTable;
-   // Carregar atributos do objeto na memória
-  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), &symbolTableCopy, s);
-  // Percorre os parâmetros e os adiciona na pilha
-  auto addedParametersIndexes = loadParametersInStack(this->actual, &symbolTableCopy, this->name, s);
   s << "#####" << expr->get_type() << ": " << this->line_number << endl;
   for(auto p : symbolTable) {
     if(p.second.empty()) continue;
@@ -1394,6 +1395,17 @@ void dispatch_class::code(ostream &s) {
   // Avalia o objeto
   expr->code(s);
   s << "#####" << expr->get_type() << endl;
+  // Emitir o push
+  emit_push(ACC, s);
+  // Salva a posição do a0
+  int positionACC = elementsInStack;
+  elementsInStack++;
+   // Carregar atributos do objeto na memória
+  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
+  // Percorre os parâmetros e os adiciona na pilha
+  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
+  // Carrega o a0 da expressão
+  emit_load(ACC, (elementsInStack-1-positionACC), SP, s);
   // Verifica se o objeto é void
   emit_bne(ACC, ZERO, labelId, s);
   // Carrega o nome do programa em a0
@@ -1408,8 +1420,6 @@ void dispatch_class::code(ostream &s) {
   // Cria um novo escopo para o novo método chamado
   // Esse escopo começa com os parâmetros do método
   scopes.push_back(oldElementsInStack);
-  // Atualiza a tabela de símbolos
-  symbolTable = symbolTableCopy;
   // Carrega o endereço do método na tabela de dispatch
   std::string address = methodClassName->get_string();
   address+= METHOD_SEP;
