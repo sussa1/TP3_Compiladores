@@ -1377,6 +1377,10 @@ void dispatch_class::code(ostream &s) {
   // Percorre os parâmetros e os adiciona na pilha
   auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
   s << "#####" << expr->get_type() << ": " << this->line_number << endl;
+  for(auto p : symbolTable) {
+    s << "#" << p.f << " -> " << p.s << endl;
+  }
+  s << "#" << scopes.back() << endl;
   // Avalia o objeto
   expr->code(s);
   s << "#####" << expr->get_type() << endl;
@@ -1894,7 +1898,7 @@ void no_expr_class::code(ostream &s) {
 
 void object_class::code(ostream &s) {
   // Verifica se o objeto existe na tabela de símbolos
-  if(symbolTable.find(this->name) != symbolTable.end()) {
+  if(symbolTable.find(this->name) != symbolTable.end() || symbolTable[name].back() >= scopes.back())) {
     int offset = getStackOffset(this->name);
     // Salva o objeto em a0
     emit_store(ACC, offset, SP, s);
