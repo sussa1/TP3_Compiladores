@@ -1290,12 +1290,11 @@ void static_dispatch_class::code(ostream &s) {
   // Atualiza currentClass
   auto oldClass = currentClass;
   currentClass = classNodeMap[className];
-  // Carrega o endereço da tabela de dispatch
+  // Carrega o endereço do método na tabela de dispatch
   std::string address = className->get_string();
-  address+= DISPTAB_SUFFIX;
+  address+= METHOD_SEP;
+  address+= this->get_type().get_string();
   emit_load_address(T1, addr.c_str(), s);
-  // Carrega o endereço do método chamado
-  emit_load(T1, offset, T1, s);
   // Chama o método
   emit_jalr(T1, s);
   // Atualiza currentClass
@@ -1337,12 +1336,11 @@ void dispatch_class::code(ostream &s) {
   // Atualiza currentClass
   auto oldClass = currentClass;
   currentClass = classNodeMap[className];
-  // Carrega o endereço da tabela de dispatch
+  // Carrega o endereço do método na tabela de dispatch
   std::string address = className->get_string();
-  address+= DISPTAB_SUFFIX;
+  address+= METHOD_SEP;
+  address+= this->get_type().get_string();
   emit_load_address(T1, addr.c_str(), s);
-  // Carrega o endereço do método chamado
-  emit_load(T1, offset, T1, s);
   // Chama o método
   emit_jalr(T1, s);
   // Atualiza currentClass
