@@ -31,11 +31,13 @@
 extern void emit_string_constant(ostream& str, char *s);
 extern int cgen_debug;
 
-std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassAttr;
-std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassMethod;
+std::map<Symbol, std::map<Symbol, int > > offsetClassAttr;
+std::map<Symbol, std::map<Symbol, std::pair<method_class*, int> > > methodOffsetClassMethod;
 std::map<Symbol, CgenNode*> classNodeMap;
 
-std::map<Symbol, vector<int> > symbolTable;
+std::map<Symbol, std::vector<int> > symbolTable;
+std::map<int, Symbol> reverseSymbolTable;
+std::vector<int> scopes = {0};
 int elementsInStack = 0;
 CgenNode* currentClass;
 
@@ -914,11 +916,10 @@ void CgenNode::code_classMethods(ostream& str) {
     str << this->get_name() << METHOD_SEP << method->getName() << LABEL;
     
     // Executa um PUSH de fp, s0 e ra na pilha
+    emit_push(FP, str);
+    emit_push(SELF, str);
+    emit_push(RA, str);
     elementsInStack+=3;
-    emit_addiu(SP, SP, -3*WORD_SIZE, str);
-    emit_store(FP, 3, SP, str);
-    emit_store(SELF, 2, SP, str);
-    emit_store(RA, 1, SP, str);
     
     // Coloca o fp para apontar para o endereço de retorno na pilha
     emit_addiu(FP, SP, 4, str);
@@ -960,7 +961,7 @@ void CgenNode::code_attributeInitializer(ostream& str) {
     if(feature->getType() == 0) {
       attr_class* attribute = (attr_class*)feature;
       // Obtem o offset do atributo no prototype
-      int offset = typeOffsetClassAttr[this->get_name()][attribute->getName()].second;
+      int offset = offsetClassAttr[this->get_name()][attribute->getName()];
       // Se o atributo não possui inicialização
       if(attribute->getInit()->isNoExpr()) {
         // Carrega o valor padrão da inicialização de cada tipo no a0
@@ -994,11 +995,10 @@ void CgenNode::code_attributeInitializer(ostream& str) {
 void CgenNode::code_objectInitializer(ostream& str) {
   str << this->get_name() << CLASSINIT_SUFFIX << LABEL;
   // Executa PUSH de fp, seguido de s0, seguido de ra
-  emit_addiu(SP, SP, -3*WORD_SIZE, str);
+  emit_push(FP, str);
+  emit_push(SELF, str);
+  emit_push(RA, str);
   elementsInStack+=3;
-  emit_store(FP, 3, SP, str);
-  emit_store(SELF, 2, SP, str);
-  emit_store(RA, 1, SP, str);
   // Faz com que fp aponte para o endereço de retorno na pilha
   emit_addiu(FP, SP, 4, str);
   // Faz com que o registrador self seja igual a a0, pois como explicado
@@ -1033,41 +1033,17 @@ void CgenClassTable::code_dispatchTables() {
   }
 }
 
-std::map<Symbol, std::pair<Symbol, Symbol> > CgenNode::getFunctionsOfClassForDispatch() {
-  auto currentNode = this;
-  auto parent = this->get_parentnd();
-  // Map para salvar a classe a qual cada função pertence, além do tipo de retorno da função
-  std::map<Symbol, std::pair<Symbol, Symbol> > functionClassMap;
-  while(currentNode != nullptr) {
-    auto features = currentNode->features;
-    for(int it = features->first(); features->more(it); it = features->next(it)) {
-      auto feature = features->nth(it);
-      // Feature é do tipo método
-      if(feature->getType() == 1) {
-        method_class* method = (method_class*)feature;
-        if(functionClassMap.find(method->getName()) == functionClassMap.end()) {
-          functionClassMap[method->getName()] = {method->getReturnType(), currentNode->get_name()};
-        }
-      }
-    }
-    auto temp = currentNode->get_parentnd();
-    parent = currentNode->get_parentnd();
-    currentNode = temp;
-  }
-  return functionClassMap;
-}
-
 void CgenNode::code_dispatchTable(ostream& str) {
   if(cgen_debug) {
     cout << "Generating dispatch table of class " << this->get_name() << endl;
   }
   str << this->get_name() << DISPTAB_SUFFIX << LABEL;
   // Map para salvar a classe a qual cada função pertence, além do tipo de retorno da função
-  auto functionClassMap = this->getFunctionsOfClassForDispatch();
+  auto functionClassMap = this->getFunctionsOfClass();
   int offset = 0;
   for(auto functionClass : functionClassMap) {
     str << WORD << functionClass.second.first << METHOD_SEP << functionClass.first << endl;
-    typeOffsetClassMethod[functionClass.second.first][functionClass.first] = {functionClass.second.first, offset++};
+    methodOffsetClassMethod[functionClass.second.first][functionClass.first] = {functionClass.second.first, offset++};
   }
 }
 
@@ -1157,7 +1133,7 @@ void CgenNode::code_attributesPrototypeObject(ostream& str, int& offset) {
       attr_class* attribute = (attr_class*)feature;
       auto typeAttribute = attribute->type_decl;
       // Salva o tipo e o offset de cada atributo
-      typeOffsetClassAttr[this->get_name()][attribute->getName()] = {typeAttribute, offset++};
+      offsetClassAttr[this->get_name()][attribute->getName()] = offset++;
       // Gera o código que inicializa os atributos
       if(typeAttribute == Str) {
         str << WORD;
@@ -1214,7 +1190,7 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
 //*****************************************************************
 
 int getStackOffset(Symbol name, ostream& s) {
-  if(symbolTable.find(this->name) == symbolTable.end()) {
+  if(symbolTable.find(name) == symbolTable.end() || symbolTable[name] < scope.back()) {
     s << "ERRO" << endl;
     return -1;
   }
@@ -1225,7 +1201,7 @@ int getStackOffset(Symbol name, ostream& s) {
   return offset;
 }
 
-void assign_class::code(ostream &s, CgenNode* classNode) {
+void assign_class::code(ostream &s) {
   // Avalia a expressão a ser atribuída
   this->expr->code(s);
   // Busca a variável para ser alterada
@@ -1238,55 +1214,474 @@ void assign_class::code(ostream &s, CgenNode* classNode) {
   }
 }
 
-void static_dispatch_class::code(ostream &s, CgenNode* classNode) {
+std::vector<int> loadAttributesInStack(Symbol caleeType) {
+  std::vector<int> ret;
+  // Atributos da classe
+  auto mapAttrTypeOffset = offsetClassAttr[caleeType]
+  for(auto attrTypeOffset : mapAttrTypeOffset) {
+    // Salva em T1 o endereço do atributo do objeto na memória
+    // Lembrando que ACC contém um ponteiro para o objeto
+    emit_addiu(T1, ACC, attrTypeOffset.second, s);
+    // Coloca na pilha o endereço do atributo
+    emit_push(T1, s);
+    // Salva o atributo na tabela de símbolos
+    symbolTable[attrTypeOffset.first].push_back(elementsInStack);
+    reverseSymbolTable[elementsInStack] = attrTypeOffset.first;
+    ret.push_back(elementsInStack);
+    elementsInStack++;
+  }
+  return ret;
 }
 
-void dispatch_class::code(ostream &s, CgenNode* classNode) {
+std::vector<int> loadParametersInStack(Expressions actuals, Symbol methodSymbol) {
+  std::vector<int> ret;
+  // Percorre os parâmetros
+  for(int it = actuals->first(); actuals->more(it); it = actuals->next(it)) {
+    Expression* expression = actuals->nth(it);
+    // Avalia o parâmetro
+    expression->code(s);
+    // Coloca seu resultado na pilha
+    emit_push(ACC, s);
+    // Salva o parâmetro na tabela de símbolos
+    auto methodOffset = methodOffsetClassMethod[currentClass->get_name()][methodSymbol];
+    Symbol parameterName = methodOffset.first->formals->nth(it)->getName();
+    symbolTable[parameterName].push_back(elementsInStack);
+    reverseSymbolTable[elementsInStack]= parameterName;
+    ret.push_back(elementsInStack);
+    elementsInStack++;
+  }
+  return ret;
 }
 
-void cond_class::code(ostream &s, CgenNode* classNode) {
+void unloadDataInStack(std::vector<int> indexes) {
+  // Remove a variável da pilha e da tabela de símbolos
+  for(int index : indexes) {
+    emit_addiu(SP, SP, WORD_SIZE, s);
+    elementsInStack--;
+    symbolTable[reverseSymbolTable[index]].pop_back();
+  }
 }
 
-void loop_class::code(ostream &s, CgenNode* classNode) {
+int labelId = 0;
+
+void static_dispatch_class::code(ostream &s) {
+  // Cria um novo escopo para o novo método chamado
+  // Esse escopo começa com os parâmetros do método
+  scope.push_back(elementsInStack);
+  // Percorre os parâmetros e os adiciona na pilha
+  auto addedParametersIndexes = this->loadParametersInStack(this->actuals, this->get_type());
+  // Avalia o objeto
+  expr->code(s);
+  // Verifica se o objeto é void
+  emit_bne(ACC, ZERO, labelId, s);
+  // Carrega o nome do programa em a0
+  emit_load_address(ACC, "str_const0", s);
+  // Carrega a linha no registrador T1
+  emit_load_imm(T1, this->line_number, s);
+  // Aborta com o procedimento correto
+  emit_jal("_dispatch_abort", s);
+  // Coloca o label para o objeto diferente de void
+  emit_label_def(labelnum++, s);
+  // Carregar atributos do objeto na memória
+  auto addedAttributesIndexes = this->loadAttributesInStack(expr->get_type());
+  // Carrega o offset do método chamado
+  Symbol className = this->type_name;
+  int offset = methodOffsetClassMethod[className][this->name].second;
+  // Atualiza currentClass
+  auto oldClass = currentClass;
+  currentClass = classNodeMap[className];
+  // Carrega o endereço da tabela de dispatch
+  std::string address = className->get_string();
+  address+= DISPTAB_SUFFIX;
+  emit_load_address(T1, addr.c_str(), s);
+  // Carrega o endereço do método chamado
+  emit_load(T1, offset, T1, s);
+  // Chama o método
+  emit_jalr(T1, s);
+  // Atualiza currentClass
+  currentClass = oldClass;
+  // Remove os parâmetros e novos atributos do estado e volta ao escopo antigo
+  scope.pop_back();
+  // Remove os atributos da pilha
+  unloadDataInStack(addedAttributesIndexes);
+  // Remove os parâmetros da pilha
+  unloadDataInStack(addedParametersIndexes);
 }
 
-void typcase_class::code(ostream &s, CgenNode* classNode) {
+void dispatch_class::code(ostream &s) {
+  // Cria um novo escopo para o novo método chamado
+  // Esse escopo começa com os parâmetros do método
+  scope.push_back(elementsInStack);
+  // Percorre os parâmetros e os adiciona na pilha
+  auto addedParametersIndexes = this->loadParametersInStack(this->actuals, this->get_type());
+  // Avalia o objeto
+  expr->code(s);
+  // Verifica se o objeto é void
+  emit_bne(ACC, ZERO, labelId, s);
+  // Carrega o nome do programa em a0
+  emit_load_address(ACC, "str_const0", s);
+  // Deixa lixo na linha retornada, pois não temos essa informação
+  // Aborta com o procedimento correto
+  emit_jal("_dispatch_abort", s);
+  // Coloca o label para o objeto diferente de void
+  emit_label_def(labelnum++, s);
+  // Carregar atributos do objeto na memória
+  auto addedAttributesIndexes = this->loadAttributesInStack(expr->get_type());
+  // Verifica se o método chamado é de um objeto ou da classe atual
+  Symbol className = currentClass->get_name();
+  if(expr->get_type() != SELF_TYPE) {
+    className = expr->get_type();
+  }
+  // Carrega o offset do método chamado
+  int offset = methodOffsetClassMethod[className][this->name].second;
+  // Atualiza currentClass
+  auto oldClass = currentClass;
+  currentClass = classNodeMap[className];
+  // Carrega o endereço da tabela de dispatch
+  std::string address = className->get_string();
+  address+= DISPTAB_SUFFIX;
+  emit_load_address(T1, addr.c_str(), s);
+  // Carrega o endereço do método chamado
+  emit_load(T1, offset, T1, s);
+  // Chama o método
+  emit_jalr(T1, s);
+  // Atualiza currentClass
+  currentClass = oldClass;
+  // Remove os parâmetros e novos atributos do estado e volta ao escopo antigo
+  scope.pop_back();
+  // Remove os atributos da pilha
+  unloadDataInStack(addedAttributesIndexes);
+  // Remove os parâmetros da pilha
+  unloadDataInStack(addedParametersIndexes);
 }
 
-void block_class::code(ostream &s, CgenNode* classNode) {
+void cond_class::code(ostream &s) {
+  this->pred->code(s);
+  int labelFalse = labelId++;
+  int labelEndIf = labelId++;
+  // Carrega o valor do objeto Bool retornado
+  emit_load(ACC, 3, ACC, s);
+  // Se ele for false, vai para o else
+  emit_beqz(ACC, labelFalse, s);
+  // Trecho do true
+  this->then_exp->code(s);
+  // Vai para o fim do if
+  emit_branch(labelEndIf, s);
+  // Trecho do false
+  emit_label_def(labelFalse, s);
+  this->else_exp->code(s);
+  // Define o fim do if
+  emit_label_def(labelEndIf, s);
+} 
+
+void loop_class::code(ostream &s) {
+  int labelWhile = labelId++;
+  int labelBreak = labelId++;
+  emit_label_def(labelWhile, s);
+  // Testa a condição do while
+  this->pred->code(s);
+  // Carrega o resultado
+  emit_load(ACC, 3, ACC, s);
+  // Sai do while se o resultado da condição for false
+  emit_beqz(ACC, labelBreak, s);
+  // Executa o corpo do while
+  this->body->code(s);
+  // Repete o loop
+  emit_branch(labelWhile, s);
+  // Saída do loop
+  emit_label_def(labelBreak, s);
+  // Retorna void para evitar de retornar o resultado da última execução do corpo do while
+  emit_move(ACC, ZERO, s);
 }
 
-void let_class::code(ostream &s, CgenNode* classNode) {
+void typcase_class::code(ostream &s) {
+  // TODO
 }
 
-void plus_class::code(ostream &s, CgenNode* classNode) {
+void block_class::code(ostream &s) {
+  // Gera o código de todos elementos do corpo, retornando o último
+  for (int it = body->first(); body->more(it); it = body->next(it)) {
+    body->nth(it)->code(s);
+  }
 }
 
-void sub_class::code(ostream &s, CgenNode* classNode) {
+void let_class::code(ostream &s) {
+  // Avalia o valor de inicialização da variável
+  this->init->code(s);
+  if(this->init->isNoExpr()) {
+    // Carrega os valores padrões caso seja um tipo básico
+    if(this->type)
+  }
 }
 
-void mul_class::code(ostream &s, CgenNode* classNode) {
+void plus_class::code(ostream &s) {
+  // Avalia e1
+  this->e1->code(s);
+  // Salva e1 na pilha
+  emit_push(ACC, s);
+  elementsInStack++;
+
+  // Avalia e2
+  this->e2->code(s);
+  // Copia o objeto resultado de e2 para salvar o resultado
+  emit_jal("Object.copy", s);
+  // Remove e1 da pilha
+  emit_addiu(SP, SP, WORD_SIZE, s);
+  elementsInStack--;
+  // Salva e1 em T1
+  emit_load(T1, 0, SP, s);
+  // Salva a cópia de e2 em T2
+  emit_move(T2, ACC, s);
+  // Carrega os valores inteiros dos objetos
+  emit_load(T1, 3, T1, s);
+  emit_load(T2, 3, T2, s);
+  // Salva a soma em T3
+  emit_add(T3, T1, T2, s);
+  // Salva no valor inteiro da cópia de e2 o valor de T3
+  // A cópia de e2 está no registrador a0
+  emit_store(T3, 3, ACC, s);
 }
 
-void divide_class::code(ostream &s, CgenNode* classNode) {
+void sub_class::code(ostream &s) {
+  // Avalia e1
+  this->e1->code(s);
+  // Salva e1 na pilha
+  emit_push(ACC, s);
+  elementsInStack++;
+
+  // Avalia e2
+  this->e2->code(s);
+  // Copia o objeto resultado de e2 para salvar o resultado
+  emit_jal("Object.copy", s);
+  // Remove e1 da pilha
+  emit_addiu(SP, SP, WORD_SIZE, s);
+  elementsInStack--;
+  // Salva e1 em T1
+  emit_load(T1, 0, SP, s);
+  // Salva a cópia de e2 em T2
+  emit_move(T2, ACC, s);
+  // Carrega os valores inteiros dos objetos
+  emit_load(T1, 3, T1, s);
+  emit_load(T2, 3, T2, s);
+  // Salva a subtração em T3
+  emit_sub(T3, T1, T2, s);
+  // Salva no valor inteiro da cópia de e2 o valor de T3
+  // A cópia de e2 está no registrador a0
+  emit_store(T3, 3, ACC, s);
 }
 
-void neg_class::code(ostream &s, CgenNode* classNode) {
+void mul_class::code(ostream &s) {
+  // Avalia e1
+  this->e1->code(s);
+  // Salva e1 na pilha
+  emit_push(ACC, s);
+  elementsInStack++;
+
+  // Avalia e2
+  this->e2->code(s);
+  // Copia o objeto resultado de e2 para salvar o resultado
+  emit_jal("Object.copy", s);
+  // Remove e1 da pilha
+  emit_addiu(SP, SP, WORD_SIZE, s);
+  elementsInStack--;
+  // Salva e1 em T1
+  emit_load(T1, 0, SP, s);
+  // Salva a cópia de e2 em T2
+  emit_move(T2, ACC, s);
+  // Carrega os valores inteiros dos objetos
+  emit_load(T1, 3, T1, s);
+  emit_load(T2, 3, T2, s);
+  // Salva a multiplicação em T3
+  emit_mul(T3, T1, T2, s);
+  // Salva no valor inteiro da cópia de e2 o valor de T3
+  // A cópia de e2 está no registrador a0
+  emit_store(T3, 3, ACC, s);
 }
 
-void lt_class::code(ostream &s, CgenNode* classNode) {
+void divide_class::code(ostream &s) {
+  // Avalia e1
+  this->e1->code(s);
+  // Salva e1 na pilha
+  emit_push(ACC, s);
+  elementsInStack++;
+
+  // Avalia e2
+  this->e2->code(s);
+  // Copia o objeto resultado de e2 para salvar o resultado
+  emit_jal("Object.copy", s);
+  // Remove e1 da pilha
+  emit_addiu(SP, SP, WORD_SIZE, s);
+  elementsInStack--;
+  // Salva e1 em T1
+  emit_load(T1, 0, SP, s);
+  // Salva a cópia de e2 em T2
+  emit_move(T2, ACC, s);
+  // Carrega os valores inteiros dos objetos
+  emit_load(T1, 3, T1, s);
+  emit_load(T2, 3, T2, s);
+  // Salva a divisão em T3
+  emit_div(T3, T1, T2, s);
+  // Salva no valor inteiro da cópia de e2 o valor de T3
+  // A cópia de e2 está no registrador a0
+  emit_store(T3, 3, ACC, s);
 }
 
-void eq_class::code(ostream &s, CgenNode* classNode) {
+void neg_class::code(ostream &s) {
+  // Avalia e1
+  this->e1->code(s);
+  // Copia o objeto do resultado de e1
+  emit_jal("Object.copy", s);
+  // Carrega o valor inteiro da cópia de e1 em T1
+  emit_load(T1, 3, ACC, s);
+  // Calcula o valor negativado de T1
+  emit_neg(T1, T1, s);
+  // Salva o valor inteiro calculado na cópia de e1
+  emit_store(T1, 3, ACC, s);
 }
 
-void leq_class::code(ostream &s, CgenNode* classNode) {
+void lt_class::code(ostream &s) {
+  // Avalia e1
+  this->e1->code(s);
+  // Salva e1 na pilha
+  emit_push(ACC, s);
+  elementsInStack++;
+
+  // Avalia e2
+  this->e2->code(s);
+  // Copia o objeto resultado de e2 para salvar o resultado
+  emit_jal("Object.copy", s);
+  // Remove e1 da pilha
+  emit_addiu(SP, SP, WORD_SIZE, s);
+  elementsInStack--;
+  // Salva e1 em T1
+  emit_load(T1, 0, SP, s);
+  // Salva a cópia de e2 em T2
+  emit_move(T2, ACC, s);
+  // Carrega os valores inteiros dos objetos
+  emit_load(T1, 3, T1, s);
+  emit_load(T2, 3, T2, s);
+  // Salva label para os branches
+  int labelLess = labelId++;
+  int labelExit = labelId++;
+  // Se T1 < T2 vai para labelLess
+  emit_blt(T1, T2, labelLess, s);
+  // Carrega false em a0
+  emit_load_bool(ACC, BoolConst(0), s);
+  // Finaliza a operação
+  emit_branch(labelExit)
+  // Se T1 < T2
+  emit_label_def(labelLess);
+  // Carrega true em a0
+  emit_load_bool(ACC, BoolConst(1), s);
+  // Label de fim da operação
+  emit_label_def(labelExit);
 }
 
-void comp_class::code(ostream &s, CgenNode* classNode) {
+void eq_class::code(ostream &s) {
+  // Avalia e1
+  this->e1->code(s);
+  // Salva e1 na pilha
+  emit_push(ACC, s);
+  elementsInStack++;
+
+  // Avalia e2
+  this->e2->code(s);
+  // Remove e1 da pilha
+  emit_addiu(SP, SP, WORD_SIZE, s);
+  elementsInStack--;
+  // Salva e1 em T1
+  emit_load(T1, 0, SP, s);
+  // Salva e2 em T2
+  emit_move(T2, ACC, s);
+  // Verifica se e1 e e2 são tipos básicos
+  if(e1->type == Bool || e1->type == Str || e1->type == Int) {
+    if(e2->type == Bool || e2->type == Str || e2->type == Int) {
+      // Se sim, chama a rotina equality_test do cool
+      emit_load_bool(ACC, BoolConst(1), s);
+      emit_load_bool(A1, BoolConst(0), s);
+      emit_jal("equality_test", s);
+      return;
+    }
+  }
+  // Se são tipos não básico, verifica se a referência é a mesma
+  // Salva label para os branches
+  int labelEqual = labelId++;
+  int labelExit = labelId++;
+  // Se T1 = T2 vai para labelEqual
+  emit_beq(T1, T2, labelEqual, s);
+  // Carrega false em a0
+  emit_load_bool(ACC, BoolConst(0), s);
+  // Finaliza a operação
+  emit_branch(labelExit)
+  // Se T1 = T2
+  emit_label_def(labelEqual);
+  // Carrega true em a0
+  emit_load_bool(ACC, BoolConst(1), s);
+  // Label de fim da operação
+  emit_label_def(labelExit);
 }
 
-void int_const_class::code(ostream& s, CgenNode* classNode)  
+void leq_class::code(ostream &s) {
+  // Avalia e1
+  this->e1->code(s);
+  // Salva e1 na pilha
+  emit_push(ACC, s);
+  elementsInStack++;
+
+  // Avalia e2
+  this->e2->code(s);
+  // Copia o objeto resultado de e2 para salvar o resultado
+  emit_jal("Object.copy", s);
+  // Remove e1 da pilha
+  emit_addiu(SP, SP, WORD_SIZE, s);
+  elementsInStack--;
+  // Salva e1 em T1
+  emit_load(T1, 0, SP, s);
+  // Salva a cópia de e2 em T2
+  emit_move(T2, ACC, s);
+  // Carrega os valores inteiros dos objetos
+  emit_load(T1, 3, T1, s);
+  emit_load(T2, 3, T2, s);
+  // Salva label para os branches
+  int labelLessEqual = labelId++;
+  int labelExit = labelId++;
+  // Se T1 < T2 vai para labelLessEqual
+  emit_bleq(T1, T2, labelLessEqual, s);
+  // Carrega false em a0
+  emit_load_bool(ACC, BoolConst(0), s);
+  // Finaliza a operação
+  emit_branch(labelExit)
+  // Se T1 < T2
+  emit_label_def(labelLessEqual);
+  // Carrega true em a0
+  emit_load_bool(ACC, BoolConst(1), s);
+  // Label de fim da operação
+  emit_label_def(labelExit);
+}
+
+void comp_class::code(ostream &s) { // Operação not
+  // Avalia e1
+  this->e1->code(s);
+  // Salva em T1 o inteiro do resultado de e1
+  emit_load(T1, 3, ACC, s);
+  // Salva label para os branches
+  int labelZero = labelId++;
+  int labelExit = labelId++;
+  // Se T1 = 0 vai para labelZero
+  emit_beqz(T1, labelZero, s);
+  // Carrega false em a0
+  emit_load_bool(ACC, BoolConst(0), s);
+  // Finaliza a operação
+  emit_branch(labelExit)
+  // Se T1 = 0
+  emit_label_def(labelZero);
+  // Carrega true em a0
+  emit_load_bool(ACC, BoolConst(1), s);
+  // Label de fim da operação
+  emit_label_def(labelExit);
+}
+
+void int_const_class::code(ostream& s)  
 {
   //
   // Need to be sure we have an IntEntry *, not an arbitrary Symbol
@@ -1294,26 +1689,49 @@ void int_const_class::code(ostream& s, CgenNode* classNode)
   emit_load_int(ACC,inttable.lookup_string(token->get_string()),s);
 }
 
-void string_const_class::code(ostream& s, CgenNode* classNode)
+void string_const_class::code(ostream& s)
 {
   emit_load_string(ACC,stringtable.lookup_string(token->get_string()),s);
 }
 
-void bool_const_class::code(ostream& s, CgenNode* classNode)
+void bool_const_class::code(ostream& s)
 {
   emit_load_bool(ACC, BoolConst(val), s);
 }
 
-void new__class::code(ostream &s, CgenNode* classNode) {
+void new__class::code(ostream &s) {
+  // TODO
 }
 
-void isvoid_class::code(ostream &s, CgenNode* classNode) {
+void isvoid_class::code(ostream &s) {
+  // Avalia e1
+  this->e1->code(s);
+  // Salva o resultado de e1 em T1
+  emit_move(T1, ACC, s);
+  // Salva label para os branches
+  int labelZero = labelId++;
+  int labelExit = labelId++;
+  // Se T1 = 0 vai para labelZero
+  emit_beqz(T1, labelZero, s);
+  // Carrega false em a0
+  emit_load_bool(ACC, BoolConst(0), s);
+  // Finaliza a operação
+  emit_branch(labelExit)
+  // Se T1 = 0
+  emit_label_def(labelZero);
+  // Carrega true em a0
+  emit_load_bool(ACC, BoolConst(1), s);
+  // Label de fim da operação
+  emit_label_def(labelExit);
 }
 
-void no_expr_class::code(ostream &s, CgenNode* classNode) {
+void no_expr_class::code(ostream &s) {
+  // Retorna zero para no_expr
+  emit_move(ACC, ZERO, s);
 }
 
-void object_class::code(ostream &s, CgenNode* classNode) {
+void object_class::code(ostream &s) {
+  // TODO
 }
 
 

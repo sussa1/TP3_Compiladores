@@ -164,4 +164,9 @@ métodos de outras classes
 Falando do estado:
 O estado de um programa é salvo na pilha, sendo que elementsInStack conta os elementos na pilha e symbolTable salva o índice de
 um dado símbolo, para possibilitar acessá-lo na pilha. currentClass salva o nó da classe que contém o código sendo analisado no momento.
-Symbol table contém variáveis locais e argumentos, já a currentClass é usada para métodos.
+Symbol table contém variáveis locais e argumentos, já a currentClass é usada para métodos. O vetor scopes guarda os índices dos primeiros símbolos
+de cada escopo. A mudança de escopo acontece ao chamar um método.
+std::map<int, Symbol> reverseSymbolTable; usada para poder remover simbolos da tabela de simbolos
+
+
+labelId mantém um id unico para definir labels distintas

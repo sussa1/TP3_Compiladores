@@ -83,7 +83,6 @@ public:
    int getSize();
    void code_attributesPrototypeObject(ostream& str, int& offset);
    void code_dispatchTable(ostream& str);
-   std::map<Symbol, std::pair<Symbol, Symbol> > getFunctionsOfClassForDispatch();
    void code_objectInitializer(ostream& str);
    void code_attributeInitializer(ostream& str);
    void code_classMethods(ostream& str);
