@@ -1378,6 +1378,7 @@ void dispatch_class::code(ostream &s) {
   auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
   // Avalia o objeto
   expr->code(s);
+  s << "#" << expr->get_type() << endl;
   // Verifica se o objeto é void
   emit_bne(ACC, ZERO, labelId, s);
   // Carrega o nome do programa em a0
