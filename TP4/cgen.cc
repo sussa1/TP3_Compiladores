@@ -506,7 +506,7 @@ void BoolConst::code_def(ostream& s, int boolclasstag)
       << WORD;
 
  /***** Add dispatch information for class Bool ******/
-      s << Int << DISPTAB_SUFFIX;
+      s << Bool << DISPTAB_SUFFIX;
 
       s << endl;                                            // dispatch table
       s << WORD << val << endl;                             // value (0 or 1)
