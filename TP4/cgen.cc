@@ -1397,8 +1397,11 @@ void dispatch_class::code(ostream &s) {
   currentClass = oldClass;
   // Remove os parâmetros e novos atributos do estado e volta ao escopo antigo
   scopes.pop_back();
-  // Remove os parâmetros da pilha
-  unloadDataInStack(addedParametersIndexes, s);
+  // Essas funções dão pop no argumento dentro delas
+  if(address != "IO.out_string" || address != "IO.out_int") {
+    // Remove os parâmetros da pilha
+    unloadDataInStack(addedParametersIndexes, s);
+  }
   // Remove os atributos da pilha
   unloadDataInStack(addedAttributesIndexes, s);
 }
