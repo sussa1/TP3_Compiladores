@@ -1008,7 +1008,7 @@ void CgenNode::code_attributeInitializer(ostream& str) {
         emit_store(ACC, DEFAULT_OBJFIELDS + offset, SELF, str);
         // Gera informações para o coletor de lixo, caso ele esteja ativo
         if(cgen_Memmgr) {
-          emit_addiu(A1, SELF, 4*(offset * DEFAULT_OBJFIELDS), str);
+          emit_addiu(A1, SELF, 4*(offset + DEFAULT_OBJFIELDS), str);
           emit_jal("_GenGC_Assign", str);
         }
       }
