@@ -41,6 +41,7 @@ private:
    void code_dispatchTables();
    void code_objectInitializer();
    void code_classMethods();
+   void code_classPrototypeTable();
 
 // The following creates an inheritance graph from
 // a list of classes.  The graph is implemented as
