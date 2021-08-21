@@ -37,7 +37,7 @@ std::map<Symbol, CgenNode*> classNodeMap;
 std::map<int, CgenNode*> classesByTag;
 
 std::map<Symbol, std::vector<int> > symbolTable;
-std::map<int, Symbol> reverseSymbolTable;
+std::map<int, std::vector<Symbol> > reverseSymbolTable;
 std::vector<int> scopes = {0};
 int elementsInStack = 0;
 CgenNode* currentClass;
@@ -1273,7 +1273,7 @@ std::vector<int> loadAttributesInStack(Symbol caleeType, ostream& s) {
     emit_push(T1, s);
     // Salva o atributo na tabela de símbolos
     symbolTable[attrTypeOffset.first].push_back(elementsInStack);
-    reverseSymbolTable[elementsInStack] = attrTypeOffset.first;
+    reverseSymbolTable[elementsInStack].push_back(attrTypeOffset.first);
     ret.push_back(elementsInStack);
     elementsInStack++;
   }
@@ -1297,7 +1297,7 @@ std::vector<int> loadParametersInStack(Expressions actuals, Symbol methodSymbol,
       cout << parameterName << endl;
     }
     symbolTable[parameterName].push_back(elementsInStack);
-    reverseSymbolTable[elementsInStack]= parameterName;
+    reverseSymbolTable[elementsInStack].push_back(parameterName);
     ret.push_back(elementsInStack);
     elementsInStack++;
   }
@@ -1309,7 +1309,8 @@ void unloadDataInStack(std::vector<int> indexes, ostream& s) {
   for(int index : indexes) {
     emit_addiu(SP, SP, WORD_SIZE, s);
     elementsInStack--;
-    symbolTable[reverseSymbolTable[index]].pop_back();
+    symbolTable[reverseSymbolTable[index].back()].pop_back();
+    reverseSymbolTable[index].pop_back()
   }
 }
 
@@ -1518,13 +1519,14 @@ void typcase_class::code(ostream &s) {
     int indexVariable = elementsInStack;
     emit_push(ACC, s);
     symbolTable[labelMatch.second->name].push_back(elementsInStack);
-    reverseSymbolTable[elementsInStack] = labelMatch.second->name;
+    reverseSymbolTable[elementsInStack].push_back(labelMatch.second->name);
     elementsInStack++;
     labelMatch.second->expr->code(s);
     // Remove o resultado da cópia da pilha
     emit_addiu(SP, SP, WORD_SIZE, s);
     elementsInStack--;
-    symbolTable[reverseSymbolTable[indexVariable]].pop_back();
+    symbolTable[reverseSymbolTable[indexVariable].back()].pop_back();
+    reverseSymbolTable[indexVariable].pop_back();
     // Vai para a label de fim do case
     emit_branch(labelEndCaseWithMatch, s);
   }
@@ -1559,14 +1561,15 @@ void let_class::code(ostream &s) {
   int indexVariable = elementsInStack;
   emit_push(ACC, s);
   symbolTable[this->identifier].push_back(elementsInStack);
-  reverseSymbolTable[elementsInStack] = this->identifier;
+  reverseSymbolTable[elementsInStack].push_back(this->identifier);
   elementsInStack++;
   // Avalia a expressão do let
   this->body->code(s);
   // Remove o identificador da pilha e da tabela de símbolos
   emit_addiu(SP, SP, WORD_SIZE, s);
   elementsInStack--;
-  symbolTable[reverseSymbolTable[indexVariable]].pop_back();
+  symbolTable[reverseSymbolTable[indexVariable].back()].pop_back();
+  reverseSymbolTable[indexVariable].pop_back();
 }
 
 void plus_class::code(ostream &s) {
