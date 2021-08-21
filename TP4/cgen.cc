@@ -1060,8 +1060,6 @@ void CgenNode::code_dispatchTable(ostream& str) {
   if(cgen_debug) {
     cout << "Generating dispatch table of class " << this->get_name() << endl;
   }
-  // Adiciona o "eyecatcher"
-  str << WORD << "-1" << endl;
   str << this->get_name() << DISPTAB_SUFFIX << LABEL;
   // Map para salvar a classe a qual cada função pertence, além do tipo de retorno da função
   auto functionClassMap = this->getFunctionsOfClass();
