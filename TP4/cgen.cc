@@ -1409,20 +1409,23 @@ void dispatch_class::code(ostream &s) {
 }
 
 void cond_class::code(ostream &s) {
-  this->pred->code(s);
   int labelFalse = labelId++;
   int labelEndIf = labelId++;
+  int labelTrue = labelId++;
+  this->pred->code(s);
   // Carrega o valor do objeto Bool retornado
   emit_load(ACC, 3, ACC, s);
-  // Se ele for false, vai para o else
-  emit_beqz(ACC, labelFalse, s);
-  // Trecho do true
-  this->then_exp->code(s);
+  // Se ele for true, vai para o then
+  emit_bne(ACC, ZERO, labelTrue, s);
+  // Condição falsa
+  emit_label_def(labelFalse, s);
+  // Trecho do false
+  this->else_exp->code(s);
   // Vai para o fim do if
   emit_branch(labelEndIf, s);
-  // Trecho do false
-  emit_label_def(labelFalse, s);
-  this->else_exp->code(s);
+  // Trecho do true
+  emit_label_def(labelTrue, s);
+  this->then_exp->code(s);
   // Define o fim do if
   emit_label_def(labelEndIf, s);
 } 
