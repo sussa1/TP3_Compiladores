@@ -1310,7 +1310,7 @@ void unloadDataInStack(std::vector<int> indexes, ostream& s) {
     emit_addiu(SP, SP, WORD_SIZE, s);
     elementsInStack--;
     symbolTable[reverseSymbolTable[index].back()].pop_back();
-    reverseSymbolTable[index].pop_back()
+    reverseSymbolTable[index].pop_back();
   }
 }
 
