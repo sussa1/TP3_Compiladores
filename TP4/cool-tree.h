@@ -12,6 +12,8 @@
 #include "tree.h"
 #include "cool-tree.handcode.h"
 
+// declara o escopo para compilar
+class Scope;
 
 // define the class for phylum
 // define simple phylum - Program

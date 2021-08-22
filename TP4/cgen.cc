@@ -169,7 +169,7 @@ static void emit_load(char *dest_reg, int offset, char *source_reg, ostream& s)
     << endl;
 }
 
-static void emit_store(char *source_reg, int offset, char *dest_reg, ostream& s)
+static void emit_store(char *source_reg, int offset, const char *dest_reg, ostream& s)
 {
   s << SW << source_reg << " " << offset * WORD_SIZE << "(" << dest_reg << ")"
       << endl;
@@ -217,7 +217,7 @@ static void emit_add(char *dest, char *src1, char *src2, ostream& s)
 static void emit_addu(char *dest, char *src1, char *src2, ostream& s)
 { s << ADDU << dest << " " << src1 << " " << src2 << endl; }
 
-static void emit_addiu(char *dest, char *src1, int imm, ostream& s)
+static void emit_addiu(const char *dest, const char *src1, int imm, ostream& s)
 { s << ADDIU << dest << " " << src1 << " " << imm << endl; }
 
 static void emit_div(char *dest, char *src1, char *src2, ostream& s)
@@ -235,7 +235,7 @@ static void emit_sll(char *dest, char *src1, int num, ostream& s)
 static void emit_jalr(char *dest, ostream& s)
 { s << JALR << "\t" << dest << endl; }
 
-static void emit_jal(const char *address,ostream &s, Scope& scope)
+static void emit_jal(const char *address,ostream &s)
 { s << JAL << address << endl; }
 
 static void emit_return(ostream& s)
@@ -250,7 +250,7 @@ static void emit_disptable_ref(Symbol sym, ostream& s)
 static void emit_init_ref(Symbol sym, ostream& s)
 { s << sym << CLASSINIT_SUFFIX; }
 
-static void emit_label_ref(int l, ostream &s, Scope& scope)
+static void emit_label_ref(int l, ostream &s)
 { s << "label" << l; }
 
 static void emit_protobj_ref(Symbol sym, ostream& s)
@@ -259,55 +259,55 @@ static void emit_protobj_ref(Symbol sym, ostream& s)
 static void emit_method_ref(Symbol classname, Symbol methodname, ostream& s)
 { s << classname << METHOD_SEP << methodname; }
 
-static void emit_label_def(int l, ostream &s, Scope& scope)
+static void emit_label_def(int l, ostream &s)
 {
   emit_label_ref(l,s);
   s << ":" << endl;
 }
 
-static void emit_beqz(char *source, int label, ostream &s, Scope& scope)
+static void emit_beqz(char *source, int label, ostream &s)
 {
   s << BEQZ << source << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_beq(char *src1, char *src2, int label, ostream &s, Scope& scope)
+static void emit_beq(char *src1, char *src2, int label, ostream &s)
 {
   s << BEQ << src1 << " " << src2 << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_bne(char *src1, char *src2, int label, ostream &s, Scope& scope)
+static void emit_bne(char *src1, char *src2, int label, ostream &s)
 {
   s << BNE << src1 << " " << src2 << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_bleq(char *src1, char *src2, int label, ostream &s, Scope& scope)
+static void emit_bleq(char *src1, char *src2, int label, ostream &s)
 {
   s << BLEQ << src1 << " " << src2 << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_blt(char *src1, char *src2, int label, ostream &s, Scope& scope)
+static void emit_blt(char *src1, char *src2, int label, ostream &s)
 {
   s << BLT << src1 << " " << src2 << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_blti(char *src1, int imm, int label, ostream &s, Scope& scope)
+static void emit_blti(char *src1, int imm, int label, ostream &s)
 {
   s << BLT << src1 << " " << imm << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_bgti(char *src1, int imm, int label, ostream &s, Scope& scope)
+static void emit_bgti(char *src1, int imm, int label, ostream &s)
 {
   s << BGT << src1 << " " << imm << " ";
   emit_label_ref(label,s);
@@ -346,7 +346,7 @@ static void emit_store_int(char *source, char *dest, ostream& s)
 { emit_store(source, DEFAULT_OBJFIELDS, dest, s); }
 
 
-static void emit_test_collector(ostream &s, Scope& scope)
+static void emit_test_collector(ostream &s)
 {
   emit_push(ACC, s);
   emit_move(ACC, SP, s); // stack end
@@ -356,7 +356,7 @@ static void emit_test_collector(ostream &s, Scope& scope)
   emit_load(ACC,0,SP,s);
 }
 
-static void emit_gc_check(char *source, ostream &s, Scope& scope)
+static void emit_gc_check(char *source, ostream &s)
 {
   if (source != A1) emit_move(A1, source, s);
   s << JAL << "_gc_check" << endl;
@@ -434,7 +434,7 @@ void StrTable::code_string_table(ostream& s, int stringclasstag)
 //
 // Ints
 //
-void IntEntry::code_ref(ostream &s, Scope& scope)
+void IntEntry::code_ref(ostream &s)
 {
   s << INTCONST_PREFIX << index;
 }
@@ -444,7 +444,7 @@ void IntEntry::code_ref(ostream &s, Scope& scope)
 // You should fill in the code naming the dispatch table.
 //
 
-void IntEntry::code_def(ostream &s, Scope& scope, int intclasstag)
+void IntEntry::code_def(ostream &s, int intclasstag)
 {
   // Add -1 eye catcher
   s << WORD << "-1" << endl;
@@ -467,7 +467,7 @@ void IntEntry::code_def(ostream &s, Scope& scope, int intclasstag)
 // Generate an Int object definition for every Int constant in the
 // inttable.
 //
-void IntTable::code_string_table(ostream &s, Scope& scope, int intclasstag)
+void IntTable::code_string_table(ostream &s, int intclasstag)
 {
   for (List<IntEntry> *l = tbl; l; l = l->tl())
     l->hd()->code_def(s,intclasstag);
@@ -901,7 +901,7 @@ std::map<Symbol, std::pair<method_class*, Symbol> > CgenNode::getFunctionsOfClas
   auto parent = this->get_parentnd();
   // Map para salvar a classe a qual cada função pertence, além do tipo de retorno da função
   std::map<Symbol, std::pair<method_class*, Symbol> > functionClassMap;
-  while(currentNode != nullptr) {
+  while(currentNode->get_name() != No_class) {
     auto features = currentNode->features;
     for(int it = features->first(); features->more(it); it = features->next(it)) {
       auto feature = features->nth(it);
@@ -944,8 +944,8 @@ void CgenNode::code_classMethods(ostream& str) {
     Scope scope;
     scope.classNode = this;
     int numberOfArguments = 0;
-    for(int it = this->formals->first(); this->formals->more(it); it = this->formals->next(it)) {
-        scope.addParameter(this->formals->nth(it)->getName());
+    for(int it = method->formals->first(); method->formals->more(it); it = method->formals->next(it)) {
+        scope.addParameter(method->formals->nth(it)->getName());
         numberOfArguments++;
     }
 
@@ -959,7 +959,7 @@ void CgenNode::code_classMethods(ostream& str) {
     emit_addiu(SP, SP, 3*WORD_SIZE, str);
 
     // Realiza o pop dos argumentos da pilha, pois o calee é responsável por dar os pops
-    emit_addiu(SP, SP, numberOfArguments*WORD_SIZE, s);
+    emit_addiu(SP, SP, numberOfArguments*WORD_SIZE, str);
 
     // Retorna do método
     emit_return(str);
@@ -1244,6 +1244,7 @@ int Scope::lookUpAttribute(Symbol symbol) {
 }
 
 int Scope::addDullElement() {
+  this->newScope();
   // Registra um item na pilha que não faz parte dos símbolos do programa
   return this->addVariable(No_class);
 }
@@ -1254,9 +1255,9 @@ void assign_class::code(ostream &s, Scope& scope) {
   int index = scope.lookUpVariable(this->name);
   if(index != -1) {
     // É uma variável
-    emit_store(ACC, idx+1, SP, s);
+    emit_store(ACC, index+1, SP, s);
     if(cgen_Memmgr == 1) {
-      emmit_addiu(A1, SP, WORD_SIZE*(index+1), s);
+      emit_addiu(A1, SP, WORD_SIZE*(index+1), s);
       emit_jal("_GenGC_Assign", s);
     }
   } else {
@@ -1273,7 +1274,7 @@ void assign_class::code(ostream &s, Scope& scope) {
       // Símbolo é parâmetro ou atributo
       emit_store(ACC, index+3, (attribute?SELF:FP), s);
       if(cgen_Memmgr == 1) {
-        emmit_addiu(A1, (attribute?SELF:FP), WORD_SIZE*(index+3), s);
+        emit_addiu(A1, (attribute?SELF:FP), WORD_SIZE*(index+3), s);
         emit_jal("_GenGC_Assign", s);
       }
     }
@@ -1295,9 +1296,9 @@ void pushParametersInStack(Expressions actuals, Scope& scope, ostream& s) {
 
 void static_dispatch_class::code(ostream &s, Scope& scope) {
   // Insere os parâmetros na pilha e no escopo
-  pushParametersInStack(this->actuals, scope, s);
+  pushParametersInStack(this->actual, scope, s);
   // Avalia o objeto
-  this->expr->code(s, scope);]
+  this->expr->code(s, scope);
   // Verifica se o objeto é void
   emit_bne(ACC, ZERO, labelId, s);
   // Carrega o nome do programa em a0
@@ -1321,9 +1322,9 @@ void static_dispatch_class::code(ostream &s, Scope& scope) {
 
 void dispatch_class::code(ostream &s, Scope& scope) {
   // Insere os parâmetros na pilha e no escopo
-  pushParametersInStack(this->actuals, scope, s);
+  pushParametersInStack(this->actual, scope, s);
   // Avalia o objeto
-  this->expr->code(s, scope);]
+  this->expr->code(s, scope);
   // Verifica se o objeto é void
   emit_bne(ACC, ZERO, labelId, s);
   // Carrega o nome do programa em a0
@@ -1341,7 +1342,7 @@ void dispatch_class::code(ostream &s, Scope& scope) {
     className = expr->get_type();
   }
   // Busca o nome da classe que define o método chamado na árvore de herança atual
-  Symbol methodClassName = methodOffsetClassMethod[this->type_name][this->name].second.second;
+  Symbol methodClassName = methodOffsetClassMethod[className][this->name].second.second;
   // Carrega o endereço do método na tabela de dispatch
   std::string address = methodClassName->get_string();
   address+= METHOD_SEP;
@@ -1429,13 +1430,13 @@ void typcase_class::code(ostream &s, Scope& scope) {
     scope.newScope();
     // Coloca a variável do match no novo escopo, sendo uma cópia do resultado
     // da expressão do case
-    scope.addVariable(labelMatch->second->name);
+    scope.addVariable(labelMatch.second->name);
     emit_push(ACC, s);
-    labelMatch->expr->code(s, scope);
+    labelMatch.second->expr->code(s, scope);
     // Dá pop da nova variável
     emit_addiu(SP, SP, 4, s);
     // Sai do escopo com a nova variável
-    scope.exitScope();
+    // scope.exitScope();
     emit_branch(labelEndCaseWithMatch, s);
   }
   // Executa o procedimento para abortar o case caso não tenha match
@@ -1474,7 +1475,7 @@ void let_class::code(ostream &s, Scope& scope) {
   // Remove o identificador da pilha
   emit_addiu(SP, SP, WORD_SIZE, s);
   // Remove o escopo do identificador
-  scope.exitScope();
+  // scope.exitScope();
 }
 
 void plus_class::code(ostream &s, Scope& scope) {
@@ -1730,7 +1731,7 @@ void comp_class::code(ostream &s, Scope& scope) { // Operação not
   emit_label_def(labelExit, s);
 }
 
-void int_const_class::code(ostream& s)  
+void int_const_class::code(ostream& s, Scope& scope)  
 {
   //
   // Need to be sure we have an IntEntry *, not an arbitrary Symbol
@@ -1738,12 +1739,12 @@ void int_const_class::code(ostream& s)
   emit_load_int(ACC,inttable.lookup_string(token->get_string()),s);
 }
 
-void string_const_class::code(ostream& s)
+void string_const_class::code(ostream& s, Scope& scope)
 {
   emit_load_string(ACC,stringtable.lookup_string(token->get_string()),s);
 }
 
-void bool_const_class::code(ostream& s)
+void bool_const_class::code(ostream& s, Scope& scope)
 {
   emit_load_bool(ACC, BoolConst(val), s);
 }
@@ -1819,9 +1820,9 @@ void object_class::code(ostream &s, Scope& scope) {
   int index = scope.lookUpVariable(this->name);
   if(index != -1) {
     // É uma variável
-    emit_store(ACC, idx+1, SP, s);
+    emit_store(ACC, index+1, SP, s);
     if(cgen_Memmgr == 1) {
-      emmit_addiu(A1, SP, WORD_SIZE*(index+1), s);
+      emit_addiu(A1, SP, WORD_SIZE*(index+1), s);
       emit_jal("_GenGC_Assign", s);
     }
   } else {
@@ -1842,7 +1843,7 @@ void object_class::code(ostream &s, Scope& scope) {
       // Símbolo é parâmetro ou atributo
       emit_store(ACC, index+3, (attribute?SELF:FP), s);
       if(cgen_Memmgr == 1) {
-        emmit_addiu(A1, (attribute?SELF:FP), WORD_SIZE*(index+3), s);
+        emit_addiu(A1, (attribute?SELF:FP), WORD_SIZE*(index+3), s);
         emit_jal("_GenGC_Assign", s);
       }
     }
