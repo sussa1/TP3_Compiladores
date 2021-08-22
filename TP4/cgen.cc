@@ -1309,13 +1309,12 @@ void static_dispatch_class::code(ostream &s, Scope scope) {
   emit_jal("_dispatch_abort", s);
   // Coloca o label para o objeto diferente de void
   emit_label_def(labelId++, s);
-  // Busca o nome da classe que define o método chamado na árvore de herança atual
-  Symbol className = methodOffsetClassMethod[this->type_name][this->name].second.second;
-  // Carrega o endereço do método na tabela de dispatch
-  std::string address = className->get_string();
-  address+= METHOD_SEP;
-  address+= this->name->get_string();
-  emit_load_address(T1, address.c_str(), s);
+  // Carrega a dispatch table em T1
+  emit_load(T1, 2, ACC, s);
+  // Busca o offset do método na dispatch table da classe
+  int offset = methodOffsetClassMethod[this->type_name][this->name].second.first;
+  // Carrega o método na dispatch table
+  emit_load(T1, offset, T1, s);
   // Chama o método
   emit_jalr(T1, s);
 }
@@ -1341,13 +1340,12 @@ void dispatch_class::code(ostream &s, Scope scope) {
   if(expr->get_type() != SELF_TYPE) {
     className = expr->get_type();
   }
-  // Busca o nome da classe que define o método chamado na árvore de herança atual
-  Symbol methodClassName = methodOffsetClassMethod[className][this->name].second.second;
-  // Carrega o endereço do método na tabela de dispatch
-  std::string address = methodClassName->get_string();
-  address+= METHOD_SEP;
-  address+= this->name->get_string();
-  emit_load_address(T1, address.c_str(), s);
+  // Carrega a dispatch table em T1
+  emit_load(T1, 2, ACC, s);
+  // Busca o offset do método na dispatch table da classe
+  int offset = methodOffsetClassMethod[className][this->name].second.first;
+  // Carrega o método na dispatch table
+  emit_load(T1, offset, T1, s);
   // Chama o método
   emit_jalr(T1, s);
 }
