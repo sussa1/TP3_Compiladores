@@ -36,12 +36,6 @@ std::map<Symbol, std::map<Symbol, std::pair<method_class*, std::pair<int, Symbol
 std::map<Symbol, CgenNode*> classNodeMap;
 std::map<int, CgenNode*> classesByTag;
 
-std::map<Symbol, std::vector<int> > symbolTable;
-std::map<int, std::vector<Symbol> > reverseSymbolTable;
-std::vector<int> scopes = {0};
-int elementsInStack = 0;
-CgenNode* currentClass;
-
 //
 // Three symbols from the semantic analyzer (semant.cc) are used.
 // If e : No_type, then no code is generated for e.
@@ -241,7 +235,7 @@ static void emit_sll(char *dest, char *src1, int num, ostream& s)
 static void emit_jalr(char *dest, ostream& s)
 { s << JALR << "\t" << dest << endl; }
 
-static void emit_jal(const char *address,ostream &s)
+static void emit_jal(const char *address,ostream &s, Scope& scope)
 { s << JAL << address << endl; }
 
 static void emit_return(ostream& s)
@@ -256,7 +250,7 @@ static void emit_disptable_ref(Symbol sym, ostream& s)
 static void emit_init_ref(Symbol sym, ostream& s)
 { s << sym << CLASSINIT_SUFFIX; }
 
-static void emit_label_ref(int l, ostream &s)
+static void emit_label_ref(int l, ostream &s, Scope& scope)
 { s << "label" << l; }
 
 static void emit_protobj_ref(Symbol sym, ostream& s)
@@ -265,55 +259,55 @@ static void emit_protobj_ref(Symbol sym, ostream& s)
 static void emit_method_ref(Symbol classname, Symbol methodname, ostream& s)
 { s << classname << METHOD_SEP << methodname; }
 
-static void emit_label_def(int l, ostream &s)
+static void emit_label_def(int l, ostream &s, Scope& scope)
 {
   emit_label_ref(l,s);
   s << ":" << endl;
 }
 
-static void emit_beqz(char *source, int label, ostream &s)
+static void emit_beqz(char *source, int label, ostream &s, Scope& scope)
 {
   s << BEQZ << source << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_beq(char *src1, char *src2, int label, ostream &s)
+static void emit_beq(char *src1, char *src2, int label, ostream &s, Scope& scope)
 {
   s << BEQ << src1 << " " << src2 << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_bne(char *src1, char *src2, int label, ostream &s)
+static void emit_bne(char *src1, char *src2, int label, ostream &s, Scope& scope)
 {
   s << BNE << src1 << " " << src2 << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_bleq(char *src1, char *src2, int label, ostream &s)
+static void emit_bleq(char *src1, char *src2, int label, ostream &s, Scope& scope)
 {
   s << BLEQ << src1 << " " << src2 << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_blt(char *src1, char *src2, int label, ostream &s)
+static void emit_blt(char *src1, char *src2, int label, ostream &s, Scope& scope)
 {
   s << BLT << src1 << " " << src2 << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_blti(char *src1, int imm, int label, ostream &s)
+static void emit_blti(char *src1, int imm, int label, ostream &s, Scope& scope)
 {
   s << BLT << src1 << " " << imm << " ";
   emit_label_ref(label,s);
   s << endl;
 }
 
-static void emit_bgti(char *src1, int imm, int label, ostream &s)
+static void emit_bgti(char *src1, int imm, int label, ostream &s, Scope& scope)
 {
   s << BGT << src1 << " " << imm << " ";
   emit_label_ref(label,s);
@@ -352,7 +346,7 @@ static void emit_store_int(char *source, char *dest, ostream& s)
 { emit_store(source, DEFAULT_OBJFIELDS, dest, s); }
 
 
-static void emit_test_collector(ostream &s)
+static void emit_test_collector(ostream &s, Scope& scope)
 {
   emit_push(ACC, s);
   emit_move(ACC, SP, s); // stack end
@@ -362,7 +356,7 @@ static void emit_test_collector(ostream &s)
   emit_load(ACC,0,SP,s);
 }
 
-static void emit_gc_check(char *source, ostream &s)
+static void emit_gc_check(char *source, ostream &s, Scope& scope)
 {
   if (source != A1) emit_move(A1, source, s);
   s << JAL << "_gc_check" << endl;
@@ -440,7 +434,7 @@ void StrTable::code_string_table(ostream& s, int stringclasstag)
 //
 // Ints
 //
-void IntEntry::code_ref(ostream &s)
+void IntEntry::code_ref(ostream &s, Scope& scope)
 {
   s << INTCONST_PREFIX << index;
 }
@@ -450,7 +444,7 @@ void IntEntry::code_ref(ostream &s)
 // You should fill in the code naming the dispatch table.
 //
 
-void IntEntry::code_def(ostream &s, int intclasstag)
+void IntEntry::code_def(ostream &s, Scope& scope, int intclasstag)
 {
   // Add -1 eye catcher
   s << WORD << "-1" << endl;
@@ -473,7 +467,7 @@ void IntEntry::code_def(ostream &s, int intclasstag)
 // Generate an Int object definition for every Int constant in the
 // inttable.
 //
-void IntTable::code_string_table(ostream &s, int intclasstag)
+void IntTable::code_string_table(ostream &s, Scope& scope, int intclasstag)
 {
   for (List<IntEntry> *l = tbl; l; l = l->tl())
     l->hd()->code_def(s,intclasstag);
@@ -897,11 +891,9 @@ void CgenClassTable::code_classMethods() {
   for(auto classNode : classes) {
     // Se a classe não é Int, Bool nem String
     if(!classNode->basic()) {
-      currentClass = classNode;
       classNode->code_classMethods(str);
     } 
   }
-  currentClass = classes[0];
 }
 
 std::map<Symbol, std::pair<method_class*, Symbol> > CgenNode::getFunctionsOfClass() {
@@ -940,7 +932,6 @@ void CgenNode::code_classMethods(ostream& str) {
     emit_push(FP, str);
     emit_push(SELF, str);
     emit_push(RA, str);
-    elementsInStack+=3;
     
     // Coloca o fp para apontar para o endereço de retorno na pilha
     emit_addiu(FP, SP, 4, str);
@@ -950,26 +941,25 @@ void CgenNode::code_classMethods(ostream& str) {
 
     // Coloca os parâmetros na pilha
 
-    // Avalia a expressão do corpo do método
-    method->getBody()->code(str);
-
-    // Realiza o pop dos argumentos da pilha, pois o calee é responsável por dar os pops
-
+    Scope scope;
+    scope.classNode = this;
+    int numberOfArguments = 0;
     for(int it = this->formals->first(); this->formals->more(it); it = this->formals->next(it)) {
-      auto parameterName = this->formals->nth(it)->getName();
-      emit_addiu(SP, SP, WORD_SIZE, s);
-      elementsInStack--;
-      reverseSymbolTable[symbolTable[parameterName].back()].pop_back();
-      symbolTable[parameterName].pop_back();
-      symbolTable[parameterName].push_back(elementsInStack);
+        scope.addParameter(this->formals->nth(it)->getName());
+        numberOfArguments++;
     }
+
+    // Avalia a expressão do corpo do método
+    method->getBody()->code(str, scope);
 
     // Executa um POP de fp, s0 e ra na pilha
     emit_load(FP, 3, SP, str);
     emit_load(SELF, 2, SP, str);
     emit_load(RA, 1, SP, str);
     emit_addiu(SP, SP, 3*WORD_SIZE, str);
-    elementsInStack-=3;
+
+    // Realiza o pop dos argumentos da pilha, pois o calee é responsável por dar os pops
+    emit_addiu(SP, SP, numberOfArguments*WORD_SIZE, s);
 
     // Retorna do método
     emit_return(str);
@@ -979,10 +969,8 @@ void CgenNode::code_classMethods(ostream& str) {
 void CgenClassTable::code_objectInitializer() {
   auto classes = this->getClassNodes();
   for(auto classNode : classes) {
-    currentClass = classNode;
     classNode->code_objectInitializer(str);
   }
-  currentClass = classes[0];
 }
 
 void CgenNode::code_attributeInitializer(ostream& str) {
@@ -1011,8 +999,10 @@ void CgenNode::code_attributeInitializer(ostream& str) {
         emit_store(ACC, DEFAULT_OBJFIELDS + offset, SELF, str);
       } else {
         // O atributo possui inicialização
+        Scope scope;
+        scope.classNode = this;
         // Carrega o resultado do código de uma expression no a0
-        attribute->getInit()->code(str);
+        attribute->getInit()->code(str, scope);
         // Salva o resultado de a0 na posição correta
         emit_store(ACC, DEFAULT_OBJFIELDS + offset, SELF, str);
         // Gera informações para o coletor de lixo, caso ele esteja ativo
@@ -1031,7 +1021,6 @@ void CgenNode::code_objectInitializer(ostream& str) {
   emit_push(FP, str);
   emit_push(SELF, str);
   emit_push(RA, str);
-  elementsInStack+=3;
   // Faz com que fp aponte para o endereço de retorno na pilha
   emit_addiu(FP, SP, 4, str);
   // Faz com que o registrador self seja igual a a0, pois como explicado
@@ -1051,7 +1040,6 @@ void CgenNode::code_objectInitializer(ostream& str) {
   emit_move(ACC, SELF, str);
   // Executa POP de fp, seguido de s0, seguido de ra
   emit_load(FP, 3, SP, str);
-  elementsInStack-=3;
   emit_load(SELF, 2, SP, str);
   emit_load(RA, 1, SP, str);
   emit_addiu(SP, SP, 3*WORD_SIZE, str);
@@ -1062,7 +1050,6 @@ void CgenNode::code_objectInitializer(ostream& str) {
 void CgenClassTable::code_dispatchTables() {
   auto classes = this->getClassNodes();
   for(auto classNode : classes) {
-    currentClass = classNode;
     classNode->code_dispatchTable(str);
   }
 }
@@ -1247,110 +1234,70 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct) :
 //
 //*****************************************************************
 
-int getStackOffset(Symbol name) {
-  int stackIndex = symbolTable[name].back();
-  // Calcula o offset com base no numero de elementos na pilha
-  // e o índice do símbolo
-  int offset = (elementsInStack-1-stackIndex);
-  return offset;
+int Scope::lookUpAttribute(Symbol symbol) {
+  // Procura por um atributo da classe na pilha
+  std::map<Symbol, int> attributesMap = offsetClassAttr[this->classNode->get_name()];
+  if(attributesMap.find(symbol) != attributesMap.end()) {
+    return attributesMap[symbol];
+  }
+  return -1;
 }
 
-void assign_class::code(ostream &s) {
+int Scope::addDullElement() {
+  // Registra um item na pilha que não faz parte dos símbolos do programa
+  return this->addVariable(No_class);
+}
+
+void assign_class::code(ostream &s, Scope& scope) {
   // Avalia a expressão a ser atribuída
-  this->expr->code(s);
-  if(symbolTable.find(name) == symbolTable.end() || symbolTable[name].back() < scopes.back()) {
-    s << "ERRO" << endl;
-    return;
-  }
-  // Busca a variável para ser alterada
-  int offset = getStackOffset(this->name);
-  emit_store(ACC, offset, SP, s);
-  // Tratamento do garbage collector
-  if(cgen_Memmgr) {
-    emit_addiu(A1, FP, 4*(offset), s);
-    emit_jal("_GenGC_Assign", s);
-  }
-}
-
-std::vector<int> loadAttributesInStack(Symbol caleeType, ostream& s) {
-  std::vector<int> ret;
-  // Atributos da classe
-  auto mapAttrTypeOffset = offsetClassAttr[caleeType];
-  for(auto attrTypeOffset : mapAttrTypeOffset) {
-    // Salva em T1 o endereço do atributo do objeto na memória
-    // Lembrando que ACC contém um ponteiro para o objeto
-    emit_addiu(T1, ACC, WORD_SIZE*attrTypeOffset.second, s);
-    // Coloca na pilha o endereço do atributo
-    emit_push(T1, s);
-    // Salva o atributo na tabela de símbolos
-    symbolTable[attrTypeOffset.first].push_back(elementsInStack);
-    reverseSymbolTable[elementsInStack].push_back(attrTypeOffset.first);
-    ret.push_back(elementsInStack);
-    elementsInStack++;
-  }
-  return ret;
-}
-
-std::vector<int> loadParametersInStack(Expressions actuals, Symbol methodSymbol, ostream& s) {
-  std::vector<int> ret;
-  // Percorre os parâmetros
-  for(int it = actuals->first(); actuals->more(it); it = actuals->next(it)) {
-    auto expression = actuals->nth(it);
-    // Avalia o parâmetro
-    expression->code(s);
-    // Coloca seu resultado na pilha
-    emit_push(ACC, s);
-    // Salva o parâmetro na tabela de símbolos
-    if(cgen_debug) {cout << currentClass->get_name() << methodSymbol << endl; }
-    auto methodOffset = methodOffsetClassMethod[currentClass->get_name()][methodSymbol];
-    Symbol parameterName = methodOffset.first->formals->nth(it)->getName();
-    if(cgen_debug) {
-      cout << parameterName << endl;
+  this->expr->code(s, scope);
+  int index = scope.lookUpVariable(this->name);
+  if(index != -1) {
+    // É uma variável
+    emit_store(ACC, idx+1, SP, s);
+    if(cgen_Memmgr == 1) {
+      emmit_addiu(A1, SP, WORD_SIZE*(index+1), s);
+      emit_jal("_GenGC_Assign", s);
     }
-    symbolTable[parameterName].push_back(elementsInStack);
-    reverseSymbolTable[elementsInStack].push_back(parameterName);
-    ret.push_back(elementsInStack);
-    elementsInStack++;
-  }
-  return ret;
-}
-
-void unloadDataInStack(std::vector<int> indexes, ostream& s) {
-  // Remove a variável da pilha e da tabela de símbolos
-  for(int index : indexes) {
-    emit_addiu(SP, SP, WORD_SIZE, s);
-    elementsInStack--;
-    symbolTable[reverseSymbolTable[index].back()].pop_back();
-    reverseSymbolTable[index].pop_back();
+  } else {
+    index = scope.lookUpParameter(this->name);
+    bool attribute = false;
+    if(index == -1) { // Se o símbolo não é um parâmetro
+      index = scope.lookUpAttribute(this->name);
+      attribute = true;
+    }
+    if(index == -1) {
+      // Símbolo não é parâmetro nem atributo
+      s << "Error" << endl;
+    } else {
+      // Símbolo é parâmetro ou atributo
+      emit_store(ACC, index+3, (attribute?SELF:FP), s);
+      if(cgen_Memmgr == 1) {
+        emmit_addiu(A1, (attribute?SELF:FP), WORD_SIZE*(index+3), s);
+        emit_jal("_GenGC_Assign", s);
+      }
+    }
   }
 }
 
 int labelId = 0;
 
-void static_dispatch_class::code(ostream &s) {
-  // Carrega o offset do método chamado
-  int offset = methodOffsetClassMethod[this->type_name][this->name].second.first;
-  Symbol className = methodOffsetClassMethod[this->type_name][this->name].second.second;
-  // Atualiza currentClass
-  auto oldClass = currentClass;
-  currentClass = classNodeMap[this->type_name];
+void pushParametersInStack(Expressions actuals, Scope& scope, ostream& s) {
+  for(int it = actuals->first(); actuals->more(it); it = actuals->next(it)) {
+    auto expression = actuals->nth(it);
+    // Avalia o parâmetro
+    expression->code(s, scope);
+    // Coloca seu resultado na pilha
+    emit_push(ACC, s);
+    scope.addDullElement();
+  }
+}
+
+void static_dispatch_class::code(ostream &s, Scope& scope) {
+  // Insere os parâmetros na pilha e no escopo
+  pushParametersInStack(this->actuals, scope, s);
   // Avalia o objeto
-  expr->code(s);
-  // Emitir o push
-  emit_push(ACC, s);
-  // Salva a posição do a0
-  int positionACC = elementsInStack;
-  elementsInStack++;
-  // Atualiza o escopo
-  // Cria um novo escopo para o novo método chamado
-  // Esse escopo começa com os parâmetros do método
-  scopes.push_back(elementsInStack);
-   // Carregar atributos do objeto na memória
-  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
-  // Percorre os parâmetros e os adiciona na pilha
-  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
-  // Carrega o a0 da expressão
-  emit_load(ACC, (elementsInStack-1-positionACC), SP, s);
+  this->expr->code(s, scope);]
   // Verifica se o objeto é void
   emit_bne(ACC, ZERO, labelId, s);
   // Carrega o nome do programa em a0
@@ -1361,6 +1308,8 @@ void static_dispatch_class::code(ostream &s) {
   emit_jal("_dispatch_abort", s);
   // Coloca o label para o objeto diferente de void
   emit_label_def(labelId++, s);
+  // Busca o nome da classe que define o método chamado na árvore de herança atual
+  Symbol className = methodOffsetClassMethod[this->type_name][this->name].second.second;
   // Carrega o endereço do método na tabela de dispatch
   std::string address = className->get_string();
   address+= METHOD_SEP;
@@ -1368,53 +1317,13 @@ void static_dispatch_class::code(ostream &s) {
   emit_load_address(T1, address.c_str(), s);
   // Chama o método
   emit_jalr(T1, s);
-  // Atualiza currentClass
-  currentClass = oldClass;
-  // Remove os novos atributos do estado e volta ao escopo antigo
-  scopes.pop_back();
-  // Remove os atributos da pilha
-  unloadDataInStack(addedAttributesIndexes, s);
-  // Desempilha o a0
-  emit_addiu(SP, SP, WORD_SIZE, s);
 }
 
-void dispatch_class::code(ostream &s) {
-  // Verifica se o método chamado é de um objeto ou da classe atual
-  Symbol className = currentClass->get_name();
-  if(expr->get_type() != SELF_TYPE) {
-    className = expr->get_type();
-  }
-  // Carrega o offset do método chamado
-  int offset = methodOffsetClassMethod[className][this->name].second.first;
-  Symbol methodClassName = methodOffsetClassMethod[className][this->name].second.second;
-  // Atualiza currentClass
-  auto oldClass = currentClass;
-  currentClass = classNodeMap[className];
-  s << "#####" << expr->get_type() << ": " << this->line_number << endl;
-  s << "#: " << symbolTable.size() << endl;
-  for(auto p : symbolTable) {
-    if(p.second.empty()) continue;
-    s << "#" << p.first << " -> " << p.second.back() << endl;
-  }
-  s << "#" << scopes.back() << endl;
+void dispatch_class::code(ostream &s, Scope& scope) {
+  // Insere os parâmetros na pilha e no escopo
+  pushParametersInStack(this->actuals, scope, s);
   // Avalia o objeto
-  expr->code(s);
-  s << "#####" << expr->get_type() << endl;
-  // Emitir o push
-  emit_push(ACC, s);
-  // Salva a posição do a0
-  int positionACC = elementsInStack;
-  elementsInStack++;
-  // Atualiza o escopo
-  // Cria um novo escopo para o novo método chamado
-  // Esse escopo começa com os parâmetros do método
-  scopes.push_back(elementsInStack);
-   // Carregar atributos do objeto na memória
-  auto addedAttributesIndexes = loadAttributesInStack(expr->get_type(), s);
-  // Percorre os parâmetros e os adiciona na pilha
-  auto addedParametersIndexes = loadParametersInStack(this->actual, this->name, s);
-  // Carrega o a0 da expressão
-  emit_load(ACC, (elementsInStack-1-positionACC), SP, s);
+  this->expr->code(s, scope);]
   // Verifica se o objeto é void
   emit_bne(ACC, ZERO, labelId, s);
   // Carrega o nome do programa em a0
@@ -1425,6 +1334,14 @@ void dispatch_class::code(ostream &s) {
   emit_jal("_dispatch_abort", s);
   // Coloca o label para o objeto diferente de void
   emit_label_def(labelId++, s);
+
+  // Busca a classe que chamou, tratando o SELF_TYPE
+  Symbol className = scope.classNode->get_name();
+  if(expr->get_type() != SELF_TYPE) {
+    className = expr->get_type();
+  }
+  // Busca o nome da classe que define o método chamado na árvore de herança atual
+  Symbol methodClassName = methodOffsetClassMethod[this->type_name][this->name].second.second;
   // Carrega o endereço do método na tabela de dispatch
   std::string address = methodClassName->get_string();
   address+= METHOD_SEP;
@@ -1432,19 +1349,13 @@ void dispatch_class::code(ostream &s) {
   emit_load_address(T1, address.c_str(), s);
   // Chama o método
   emit_jalr(T1, s);
-  // Atualiza currentClass
-  currentClass = oldClass;
-  // Remove os novos atributos do estado e volta ao escopo antigo
-  scopes.pop_back();
-  // Remove os atributos da pilha
-  unloadDataInStack(addedAttributesIndexes, s);
 }
 
-void cond_class::code(ostream &s) {
+void cond_class::code(ostream &s, Scope& scope) {
   int labelFalse = labelId++;
   int labelEndIf = labelId++;
   int labelTrue = labelId++;
-  this->pred->code(s);
+  this->pred->code(s, scope);
   // Carrega o valor do objeto Bool retornado
   emit_load(ACC, 3, ACC, s);
   // Se ele for true, vai para o then
@@ -1452,28 +1363,28 @@ void cond_class::code(ostream &s) {
   // Condição falsa
   emit_label_def(labelFalse, s);
   // Trecho do false
-  this->else_exp->code(s);
+  this->else_exp->code(s, scope);
   // Vai para o fim do if
   emit_branch(labelEndIf, s);
   // Trecho do true
   emit_label_def(labelTrue, s);
-  this->then_exp->code(s);
+  this->then_exp->code(s, scope);
   // Define o fim do if
   emit_label_def(labelEndIf, s);
 } 
 
-void loop_class::code(ostream &s) {
+void loop_class::code(ostream &s, Scope& scope) {
   int labelWhile = labelId++;
   int labelBreak = labelId++;
   emit_label_def(labelWhile, s);
   // Testa a condição do while
-  this->pred->code(s);
+  this->pred->code(s, scope);
   // Carrega o resultado
   emit_load(ACC, 3, ACC, s);
   // Sai do while se o resultado da condição for false
   emit_beqz(ACC, labelBreak, s);
   // Executa o corpo do while
-  this->body->code(s);
+  this->body->code(s, scope);
   // Repete o loop
   emit_branch(labelWhile, s);
   // Saída do loop
@@ -1482,9 +1393,9 @@ void loop_class::code(ostream &s) {
   emit_move(ACC, ZERO, s);
 }
 
-void typcase_class::code(ostream &s) {
+void typcase_class::code(ostream &s, Scope& scope) {
   // Avalia a expressão do case
-  this->expr->code(s);
+  this->expr->code(s, scope);
   int labelExprValida = labelId++;
   // Se a expressão do case for void, aborta chamando o procedimento correto
   emit_bne(ACC, ZERO, labelExprValida, s);
@@ -1514,22 +1425,17 @@ void typcase_class::code(ostream &s) {
   int labelEndCaseWithMatch = labelId++;
   for(auto labelMatch : labelsMatches) {
     emit_label_def(labelMatch.first, s);
-    // Adiciona a variável do match na pilha e na tabela de símbolos
-    // Copia o objeto resultado da expressão do match (que está em a0)
-    emit_jal("Object.copy", s);
-    // Salva o resultado da cópia na pilha e na tabela de símbolos
-    int indexVariable = elementsInStack;
+    // Cria um novo escopo
+    scope.newScope();
+    // Coloca a variável do match no novo escopo, sendo uma cópia do resultado
+    // da expressão do case
+    scope.addVariable(labelMatch->second->name);
     emit_push(ACC, s);
-    symbolTable[labelMatch.second->name].push_back(elementsInStack);
-    reverseSymbolTable[elementsInStack].push_back(labelMatch.second->name);
-    elementsInStack++;
-    labelMatch.second->expr->code(s);
-    // Remove o resultado da cópia da pilha
-    emit_addiu(SP, SP, WORD_SIZE, s);
-    elementsInStack--;
-    symbolTable[reverseSymbolTable[indexVariable].back()].pop_back();
-    reverseSymbolTable[indexVariable].pop_back();
-    // Vai para a label de fim do case
+    labelMatch->expr->code(s, scope);
+    // Dá pop da nova variável
+    emit_addiu(SP, SP, 4, s);
+    // Sai do escopo com a nova variável
+    scope.exitScope();
     emit_branch(labelEndCaseWithMatch, s);
   }
   // Executa o procedimento para abortar o case caso não tenha match
@@ -1539,16 +1445,16 @@ void typcase_class::code(ostream &s) {
   emit_label_def(labelEndCaseWithMatch, s);
 }
 
-void block_class::code(ostream &s) {
+void block_class::code(ostream &s, Scope& scope) {
   // Gera o código de todos elementos do corpo, retornando o último
   for (int it = this->body->first(); this->body->more(it); it = this->body->next(it)) {
-    this->body->nth(it)->code(s);
+    this->body->nth(it)->code(s, scope);
   }
 }
 
-void let_class::code(ostream &s) {
+void let_class::code(ostream &s, Scope& scope) {
   // Avalia o valor de inicialização da variável
-  this->init->code(s);
+  this->init->code(s, scope);
   if(this->init->isNoExpr()) {
     // Carrega os valores padrões caso seja um tipo básico
     if(this->type_decl == Int) {
@@ -1559,35 +1465,30 @@ void let_class::code(ostream &s) {
       emit_load_string(ACC, stringtable.lookup_string(""), s);
     }
   }
-  // Coloca o identificador do let na pilha e na tabela de símbolos
-  int indexVariable = elementsInStack;
+  // Coloca o identificador do let na pilha e no escopo
   emit_push(ACC, s);
-  symbolTable[this->identifier].push_back(elementsInStack);
-  reverseSymbolTable[elementsInStack].push_back(this->identifier);
-  elementsInStack++;
+  scope.newScope();
+  scope.addVariable(this->identifier);
   // Avalia a expressão do let
-  this->body->code(s);
-  // Remove o identificador da pilha e da tabela de símbolos
+  this->body->code(s, scope);
+  // Remove o identificador da pilha
   emit_addiu(SP, SP, WORD_SIZE, s);
-  elementsInStack--;
-  symbolTable[reverseSymbolTable[indexVariable].back()].pop_back();
-  reverseSymbolTable[indexVariable].pop_back();
+  // Remove o escopo do identificador
+  scope.exitScope();
 }
 
-void plus_class::code(ostream &s) {
+void plus_class::code(ostream &s, Scope& scope) {
   // Avalia e1
-  this->e1->code(s);
+  this->e1->code(s, scope);
   // Salva e1 na pilha
   emit_push(ACC, s);
-  elementsInStack++;
-
+  scope.addDullElement();
   // Avalia e2
-  this->e2->code(s);
+  this->e2->code(s, scope);
   // Copia o objeto resultado de e2 para salvar o resultado
   emit_jal("Object.copy", s);
   // Remove e1 da pilha
   emit_addiu(SP, SP, WORD_SIZE, s);
-  elementsInStack--;
   // Salva e1 em T1
   emit_load(T1, 0, SP, s);
   // Salva a cópia de e2 em T2
@@ -1602,20 +1503,18 @@ void plus_class::code(ostream &s) {
   emit_store(T3, 3, ACC, s);
 }
 
-void sub_class::code(ostream &s) {
+void sub_class::code(ostream &s, Scope& scope) {
   // Avalia e1
-  this->e1->code(s);
+  this->e1->code(s, scope);
   // Salva e1 na pilha
   emit_push(ACC, s);
-  elementsInStack++;
-
+  scope.addDullElement();
   // Avalia e2
-  this->e2->code(s);
+  this->e2->code(s, scope);
   // Copia o objeto resultado de e2 para salvar o resultado
   emit_jal("Object.copy", s);
   // Remove e1 da pilha
   emit_addiu(SP, SP, WORD_SIZE, s);
-  elementsInStack--;
   // Salva e1 em T1
   emit_load(T1, 0, SP, s);
   // Salva a cópia de e2 em T2
@@ -1623,27 +1522,25 @@ void sub_class::code(ostream &s) {
   // Carrega os valores inteiros dos objetos
   emit_load(T1, 3, T1, s);
   emit_load(T2, 3, T2, s);
-  // Salva a subtração em T3
+  // Salva a soma em T3
   emit_sub(T3, T1, T2, s);
   // Salva no valor inteiro da cópia de e2 o valor de T3
   // A cópia de e2 está no registrador a0
   emit_store(T3, 3, ACC, s);
 }
 
-void mul_class::code(ostream &s) {
+void mul_class::code(ostream &s, Scope& scope) {
   // Avalia e1
-  this->e1->code(s);
+  this->e1->code(s, scope);
   // Salva e1 na pilha
   emit_push(ACC, s);
-  elementsInStack++;
-
+  scope.addDullElement();
   // Avalia e2
-  this->e2->code(s);
+  this->e2->code(s, scope);
   // Copia o objeto resultado de e2 para salvar o resultado
   emit_jal("Object.copy", s);
   // Remove e1 da pilha
   emit_addiu(SP, SP, WORD_SIZE, s);
-  elementsInStack--;
   // Salva e1 em T1
   emit_load(T1, 0, SP, s);
   // Salva a cópia de e2 em T2
@@ -1651,27 +1548,25 @@ void mul_class::code(ostream &s) {
   // Carrega os valores inteiros dos objetos
   emit_load(T1, 3, T1, s);
   emit_load(T2, 3, T2, s);
-  // Salva a multiplicação em T3
+  // Salva a soma em T3
   emit_mul(T3, T1, T2, s);
   // Salva no valor inteiro da cópia de e2 o valor de T3
   // A cópia de e2 está no registrador a0
   emit_store(T3, 3, ACC, s);
 }
 
-void divide_class::code(ostream &s) {
+void divide_class::code(ostream &s, Scope& scope) {
   // Avalia e1
-  this->e1->code(s);
+  this->e1->code(s, scope);
   // Salva e1 na pilha
   emit_push(ACC, s);
-  elementsInStack++;
-
+  scope.addDullElement();
   // Avalia e2
-  this->e2->code(s);
+  this->e2->code(s, scope);
   // Copia o objeto resultado de e2 para salvar o resultado
   emit_jal("Object.copy", s);
   // Remove e1 da pilha
   emit_addiu(SP, SP, WORD_SIZE, s);
-  elementsInStack--;
   // Salva e1 em T1
   emit_load(T1, 0, SP, s);
   // Salva a cópia de e2 em T2
@@ -1679,16 +1574,16 @@ void divide_class::code(ostream &s) {
   // Carrega os valores inteiros dos objetos
   emit_load(T1, 3, T1, s);
   emit_load(T2, 3, T2, s);
-  // Salva a divisão em T3
+  // Salva a soma em T3
   emit_div(T3, T1, T2, s);
   // Salva no valor inteiro da cópia de e2 o valor de T3
   // A cópia de e2 está no registrador a0
   emit_store(T3, 3, ACC, s);
 }
 
-void neg_class::code(ostream &s) {
+void neg_class::code(ostream &s, Scope& scope) {
   // Avalia e1
-  this->e1->code(s);
+  this->e1->code(s, scope);
   // Copia o objeto do resultado de e1
   emit_jal("Object.copy", s);
   // Carrega o valor inteiro da cópia de e1 em T1
@@ -1699,20 +1594,18 @@ void neg_class::code(ostream &s) {
   emit_store(T1, 3, ACC, s);
 }
 
-void lt_class::code(ostream &s) {
+void lt_class::code(ostream &s, Scope& scope) {
   // Avalia e1
-  this->e1->code(s);
+  this->e1->code(s, scope);
   // Salva e1 na pilha
   emit_push(ACC, s);
-  elementsInStack++;
-
+  scope.addDullElement();
   // Avalia e2
-  this->e2->code(s);
+  this->e2->code(s, scope);
   // Copia o objeto resultado de e2 para salvar o resultado
   emit_jal("Object.copy", s);
   // Remove e1 da pilha
   emit_addiu(SP, SP, WORD_SIZE, s);
-  elementsInStack--;
   // Salva e1 em T1
   emit_load(T1, 0, SP, s);
   // Salva a cópia de e2 em T2
@@ -1737,18 +1630,16 @@ void lt_class::code(ostream &s) {
   emit_label_def(labelExit, s);
 }
 
-void eq_class::code(ostream &s) {
+void eq_class::code(ostream &s, Scope& scope) {
   // Avalia e1
-  this->e1->code(s);
+  this->e1->code(s, scope);
   // Salva e1 na pilha
   emit_push(ACC, s);
-  elementsInStack++;
-
+  scope.addDullElement();
   // Avalia e2
-  this->e2->code(s);
+  this->e2->code(s, scope);
   // Remove e1 da pilha
   emit_addiu(SP, SP, WORD_SIZE, s);
-  elementsInStack--;
   // Salva e1 em T1
   emit_load(T1, 0, SP, s);
   // Salva e2 em T2
@@ -1781,20 +1672,18 @@ void eq_class::code(ostream &s) {
   emit_label_def(labelExit, s);
 }
 
-void leq_class::code(ostream &s) {
+void leq_class::code(ostream &s, Scope& scope) {
   // Avalia e1
-  this->e1->code(s);
+  this->e1->code(s, scope);
   // Salva e1 na pilha
   emit_push(ACC, s);
-  elementsInStack++;
-
+  scope.addDullElement();
   // Avalia e2
-  this->e2->code(s);
+  this->e2->code(s, scope);
   // Copia o objeto resultado de e2 para salvar o resultado
   emit_jal("Object.copy", s);
   // Remove e1 da pilha
   emit_addiu(SP, SP, WORD_SIZE, s);
-  elementsInStack--;
   // Salva e1 em T1
   emit_load(T1, 0, SP, s);
   // Salva a cópia de e2 em T2
@@ -1819,9 +1708,9 @@ void leq_class::code(ostream &s) {
   emit_label_def(labelExit, s);
 }
 
-void comp_class::code(ostream &s) { // Operação not
+void comp_class::code(ostream &s, Scope& scope) { // Operação not
   // Avalia e1
-  this->e1->code(s);
+  this->e1->code(s, scope);
   // Salva em T1 o inteiro do resultado de e1
   emit_load(T1, 3, ACC, s);
   // Salva label para os branches
@@ -1859,7 +1748,7 @@ void bool_const_class::code(ostream& s)
   emit_load_bool(ACC, BoolConst(val), s);
 }
 
-void new__class::code(ostream &s) {
+void new__class::code(ostream &s, Scope& scope) {
   if (this->type_name == SELF_TYPE) {
         // Salva em T1 o endereço da tabela de classes
         emit_load_address(T1, "classPrototypeTable", s);
@@ -1897,9 +1786,9 @@ void new__class::code(ostream &s) {
 
 }
 
-void isvoid_class::code(ostream &s) {
+void isvoid_class::code(ostream &s, Scope& scope) {
   // Avalia e1
-  this->e1->code(s);
+  this->e1->code(s, scope);
   // Salva o resultado de e1 em T1
   emit_move(T1, ACC, s);
   // Salva label para os branches
@@ -1919,28 +1808,43 @@ void isvoid_class::code(ostream &s) {
   emit_label_def(labelExit, s);
 }
 
-void no_expr_class::code(ostream &s) {
+void no_expr_class::code(ostream &s, Scope& scope) {
   // Retorna zero para no_expr
   emit_move(ACC, ZERO, s);
 }
 
-void object_class::code(ostream &s) {
-  // Verifica se o objeto existe na tabela de símbolos
-  if(symbolTable.find(this->name) != symbolTable.end() && symbolTable[name].back() >= scopes.back()) {
-    int offset = getStackOffset(this->name);
-    // Salva o objeto em a0
-    emit_store(ACC, offset, SP, s);
-    // Tratamento do garbage collector
-    if(cgen_Memmgr) {
-      emit_addiu(A1, FP, 4*(offset), s);
+void object_class::code(ostream &s, Scope& scope) {
+  // Verifica se o objeto existe no escopo e qual o seu tipo
+  // (variável, atributo ou parâmetro)
+  int index = scope.lookUpVariable(this->name);
+  if(index != -1) {
+    // É uma variável
+    emit_store(ACC, idx+1, SP, s);
+    if(cgen_Memmgr == 1) {
+      emmit_addiu(A1, SP, WORD_SIZE*(index+1), s);
       emit_jal("_GenGC_Assign", s);
     }
   } else {
-    if(name == self) {
-      // O objeto é o self, logo salva SELF em a0
-      emit_move(ACC, SELF, s);
+    index = scope.lookUpParameter(this->name);
+    bool attribute = false;
+    if(index == -1) { // Se o símbolo não é um parâmetro
+      index = scope.lookUpAttribute(this->name);
+      attribute = true;
+    }
+    if(index == -1) {
+      // Símbolo não é parâmetro nem atributo
+      if(this->name == self) { // Símbolo é o self
+        emit_move(ACC, SELF, s);
+      } else {
+        s << "Error!" << endl;
+      }
     } else {
-      s << "Erro!" << endl;
+      // Símbolo é parâmetro ou atributo
+      emit_store(ACC, index+3, (attribute?SELF:FP), s);
+      if(cgen_Memmgr == 1) {
+        emmit_addiu(A1, (attribute?SELF:FP), WORD_SIZE*(index+3), s);
+        emit_jal("_GenGC_Assign", s);
+      }
     }
   }
 }

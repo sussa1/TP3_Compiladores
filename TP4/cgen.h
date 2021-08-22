@@ -59,6 +59,67 @@ public:
    CgenNodeP root();
 };
 
+class Scope {
+public:
+   Scope() : classNode(nullptr) {}
+
+   void newScope() { // Cria novo escopo
+      scopeSize.push_back(0);
+   }
+
+   void exitScope() { // Sai do escopo atual
+      for(int it = 0; it < scopeSize.back(); it++) {
+         variableTable.pop_back();
+      }
+      scopeSize.pop_back();
+   }
+
+   int lookUpAttribute(Symbol symbol); // Busca um símbolo que é um atributo
+
+   // Busca um símbolo que é uma variável
+   // As variáveis são salvas em ordem reversa
+   int lookUpVariable(Symbol symbol) {
+      for(int it = variableTable.size() - 1; it >= 0; it--) {
+         if(variableTable[it] == symbol) {
+            return variableTable.size() - 1 - it;
+         }
+      }
+      return -1;
+   }
+
+   // Adiciona uma nova variável
+   int addVariable(Symbol symbol) {
+      variableTable.push_back(symbol);
+      scopeSize[scopeSize.size() - 1]++;
+      return variableTable.size() - 1;
+   }
+
+   // Adiciona um elemento que foi inserido na pilha mas não é variável
+   int addDullElement();   
+
+   // Busca um símbolo que é um parâmetro
+   int lookUpParameter(Symbol symbol) {
+      for(int it = 0; it < parameterTable.size(); it++) {
+         if(parameterTable[it] == symbol) {
+            return parameterTable.size() - 1 - it;
+         }
+      }
+      return -1;
+   }
+
+   // Adiciona um novo parâmetro
+   int addParameter(Symbol symbol) {
+      parameterTable.push_back(symbol);
+      return parameterTable.size() - 1;
+   }
+
+   std::vector<int> scopeSize;
+   std::vector<Symbol> variableTable;
+   std::vector<Symbol> parameterTable;
+   CgenNode* classNode;
+
+};
+
 
 class CgenNode : public class__class {
 private: 
