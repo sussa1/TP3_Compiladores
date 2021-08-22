@@ -358,7 +358,7 @@ static void emit_test_collector(ostream &s)
 
 static void emit_gc_check(char *source, ostream &s)
 {
-  if (source != A1) emit_move(A1, source, s);
+  if (std::string(source) != std::string(A1)) emit_move(A1, source, s);
   s << JAL << "_gc_check" << endl;
 }
 
@@ -929,10 +929,10 @@ void CgenNode::code_classMethods(ostream& str) {
     str << this->get_name() << METHOD_SEP << method->getName() << LABEL;
     
     // Executa um PUSH de fp, s0 e ra na pilha
-    emit_addiu(SP, SP, -12, s);
-    emit_store(FP, 3, SP, s);
-    emit_store(SELF, 2, SP, s);
-    emit_store(RA, 1, SP, s);
+    emit_addiu(SP, SP, -12, str);
+    emit_store(FP, 3, SP, str);
+    emit_store(SELF, 2, SP, str);
+    emit_store(RA, 1, SP, str);
 
     // Coloca o fp para apontar para o endereço de retorno na pilha
     emit_addiu(FP, SP, 4, str);
@@ -1019,10 +1019,10 @@ void CgenNode::code_attributeInitializer(ostream& str) {
 void CgenNode::code_objectInitializer(ostream& str) {
   str << this->get_name() << CLASSINIT_SUFFIX << LABEL;
   // Executa PUSH de fp, seguido de s0, seguido de ra
-  emit_addiu(SP, SP, -12, s);
-  emit_store(FP, 3, SP, s);
-  emit_store(SELF, 2, SP, s);
-  emit_store(RA, 1, SP, s);
+  emit_addiu(SP, SP, -12, str);
+  emit_store(FP, 3, SP, str);
+  emit_store(SELF, 2, SP, str);
+  emit_store(RA, 1, SP, str);
   // Faz com que fp aponte para o endereço de retorno na pilha
   emit_addiu(FP, SP, 4, str);
   // Faz com que o registrador self seja igual a a0, pois como explicado
