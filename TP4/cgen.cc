@@ -1309,8 +1309,10 @@ void static_dispatch_class::code(ostream &s, Scope scope) {
   emit_jal("_dispatch_abort", s);
   // Coloca o label para o objeto diferente de void
   emit_label_def(labelId++, s);
+  // Busca a dispatch table do tipo
+  std::string address = this->type_name -> get_string() + DISPTAB_SUFFIX;
   // Carrega a dispatch table em T1
-  emit_load(T1, 2, ACC, s);
+  emit_load_address(T1, address.c_str(), s);
   // Busca o offset do método na dispatch table da classe
   int offset = methodOffsetClassMethod[this->type_name][this->name].second.first;
   // Carrega o método na dispatch table
