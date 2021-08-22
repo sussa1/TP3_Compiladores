@@ -1822,7 +1822,7 @@ void object_class::code(ostream &s, Scope scope) {
   int index = scope.lookUpVariable(this->name);
   if(index != -1) {
     // É uma variável
-    emit_store(ACC, index+1, SP, s);
+    emit_load(ACC, index+1, SP, s);
     if(cgen_Memmgr == 1) {
       emit_addiu(A1, SP, WORD_SIZE*(index+1), s);
       emit_jal("_GenGC_Assign", s);
@@ -1843,7 +1843,7 @@ void object_class::code(ostream &s, Scope scope) {
       }
     } else {
       // Símbolo é parâmetro ou atributo
-      emit_store(ACC, index+3, (attribute?SELF:FP), s);
+      emit_load(ACC, index+3, (attribute?SELF:FP), s);
       if(cgen_Memmgr == 1) {
         emit_addiu(A1, (attribute?SELF:FP), WORD_SIZE*(index+3), s);
         emit_jal("_GenGC_Assign", s);
