@@ -1249,7 +1249,7 @@ int Scope::addDullElement() {
   return this->addVariable(No_class);
 }
 
-void assign_class::code(ostream &s, Scope& scope) {
+void assign_class::code(ostream &s, Scope scope) {
   // Avalia a expressão a ser atribuída
   this->expr->code(s, scope);
   int index = scope.lookUpVariable(this->name);
@@ -1294,7 +1294,7 @@ void pushParametersInStack(Expressions actuals, Scope& scope, ostream& s) {
   }
 }
 
-void static_dispatch_class::code(ostream &s, Scope& scope) {
+void static_dispatch_class::code(ostream &s, Scope scope) {
   // Insere os parâmetros na pilha e no escopo
   pushParametersInStack(this->actual, scope, s);
   // Avalia o objeto
@@ -1320,7 +1320,7 @@ void static_dispatch_class::code(ostream &s, Scope& scope) {
   emit_jalr(T1, s);
 }
 
-void dispatch_class::code(ostream &s, Scope& scope) {
+void dispatch_class::code(ostream &s, Scope scope) {
   // Insere os parâmetros na pilha e no escopo
   pushParametersInStack(this->actual, scope, s);
   // Avalia o objeto
@@ -1352,7 +1352,7 @@ void dispatch_class::code(ostream &s, Scope& scope) {
   emit_jalr(T1, s);
 }
 
-void cond_class::code(ostream &s, Scope& scope) {
+void cond_class::code(ostream &s, Scope scope) {
   int labelFalse = labelId++;
   int labelEndIf = labelId++;
   int labelTrue = labelId++;
@@ -1374,7 +1374,7 @@ void cond_class::code(ostream &s, Scope& scope) {
   emit_label_def(labelEndIf, s);
 } 
 
-void loop_class::code(ostream &s, Scope& scope) {
+void loop_class::code(ostream &s, Scope scope) {
   int labelWhile = labelId++;
   int labelBreak = labelId++;
   emit_label_def(labelWhile, s);
@@ -1394,7 +1394,7 @@ void loop_class::code(ostream &s, Scope& scope) {
   emit_move(ACC, ZERO, s);
 }
 
-void typcase_class::code(ostream &s, Scope& scope) {
+void typcase_class::code(ostream &s, Scope scope) {
   // Avalia a expressão do case
   this->expr->code(s, scope);
   int labelExprValida = labelId++;
@@ -1446,14 +1446,14 @@ void typcase_class::code(ostream &s, Scope& scope) {
   emit_label_def(labelEndCaseWithMatch, s);
 }
 
-void block_class::code(ostream &s, Scope& scope) {
+void block_class::code(ostream &s, Scope scope) {
   // Gera o código de todos elementos do corpo, retornando o último
   for (int it = this->body->first(); this->body->more(it); it = this->body->next(it)) {
     this->body->nth(it)->code(s, scope);
   }
 }
 
-void let_class::code(ostream &s, Scope& scope) {
+void let_class::code(ostream &s, Scope scope) {
   // Avalia o valor de inicialização da variável
   this->init->code(s, scope);
   if(this->init->isNoExpr()) {
@@ -1478,7 +1478,7 @@ void let_class::code(ostream &s, Scope& scope) {
   // scope.exitScope();
 }
 
-void plus_class::code(ostream &s, Scope& scope) {
+void plus_class::code(ostream &s, Scope scope) {
   // Avalia e1
   this->e1->code(s, scope);
   // Salva e1 na pilha
@@ -1504,7 +1504,7 @@ void plus_class::code(ostream &s, Scope& scope) {
   emit_store(T3, 3, ACC, s);
 }
 
-void sub_class::code(ostream &s, Scope& scope) {
+void sub_class::code(ostream &s, Scope scope) {
   // Avalia e1
   this->e1->code(s, scope);
   // Salva e1 na pilha
@@ -1530,7 +1530,7 @@ void sub_class::code(ostream &s, Scope& scope) {
   emit_store(T3, 3, ACC, s);
 }
 
-void mul_class::code(ostream &s, Scope& scope) {
+void mul_class::code(ostream &s, Scope scope) {
   // Avalia e1
   this->e1->code(s, scope);
   // Salva e1 na pilha
@@ -1556,7 +1556,7 @@ void mul_class::code(ostream &s, Scope& scope) {
   emit_store(T3, 3, ACC, s);
 }
 
-void divide_class::code(ostream &s, Scope& scope) {
+void divide_class::code(ostream &s, Scope scope) {
   // Avalia e1
   this->e1->code(s, scope);
   // Salva e1 na pilha
@@ -1582,7 +1582,7 @@ void divide_class::code(ostream &s, Scope& scope) {
   emit_store(T3, 3, ACC, s);
 }
 
-void neg_class::code(ostream &s, Scope& scope) {
+void neg_class::code(ostream &s, Scope scope) {
   // Avalia e1
   this->e1->code(s, scope);
   // Copia o objeto do resultado de e1
@@ -1595,7 +1595,7 @@ void neg_class::code(ostream &s, Scope& scope) {
   emit_store(T1, 3, ACC, s);
 }
 
-void lt_class::code(ostream &s, Scope& scope) {
+void lt_class::code(ostream &s, Scope scope) {
   // Avalia e1
   this->e1->code(s, scope);
   // Salva e1 na pilha
@@ -1631,7 +1631,7 @@ void lt_class::code(ostream &s, Scope& scope) {
   emit_label_def(labelExit, s);
 }
 
-void eq_class::code(ostream &s, Scope& scope) {
+void eq_class::code(ostream &s, Scope scope) {
   // Avalia e1
   this->e1->code(s, scope);
   // Salva e1 na pilha
@@ -1673,7 +1673,7 @@ void eq_class::code(ostream &s, Scope& scope) {
   emit_label_def(labelExit, s);
 }
 
-void leq_class::code(ostream &s, Scope& scope) {
+void leq_class::code(ostream &s, Scope scope) {
   // Avalia e1
   this->e1->code(s, scope);
   // Salva e1 na pilha
@@ -1709,7 +1709,7 @@ void leq_class::code(ostream &s, Scope& scope) {
   emit_label_def(labelExit, s);
 }
 
-void comp_class::code(ostream &s, Scope& scope) { // Operação not
+void comp_class::code(ostream &s, Scope scope) { // Operação not
   // Avalia e1
   this->e1->code(s, scope);
   // Salva em T1 o inteiro do resultado de e1
@@ -1731,7 +1731,7 @@ void comp_class::code(ostream &s, Scope& scope) { // Operação not
   emit_label_def(labelExit, s);
 }
 
-void int_const_class::code(ostream& s, Scope& scope)  
+void int_const_class::code(ostream& s, Scope scope)  
 {
   //
   // Need to be sure we have an IntEntry *, not an arbitrary Symbol
@@ -1739,17 +1739,17 @@ void int_const_class::code(ostream& s, Scope& scope)
   emit_load_int(ACC,inttable.lookup_string(token->get_string()),s);
 }
 
-void string_const_class::code(ostream& s, Scope& scope)
+void string_const_class::code(ostream& s, Scope scope)
 {
   emit_load_string(ACC,stringtable.lookup_string(token->get_string()),s);
 }
 
-void bool_const_class::code(ostream& s, Scope& scope)
+void bool_const_class::code(ostream& s, Scope scope)
 {
   emit_load_bool(ACC, BoolConst(val), s);
 }
 
-void new__class::code(ostream &s, Scope& scope) {
+void new__class::code(ostream &s, Scope scope) {
   if (this->type_name == SELF_TYPE) {
         // Salva em T1 o endereço da tabela de classes
         emit_load_address(T1, "classPrototypeTable", s);
@@ -1787,7 +1787,7 @@ void new__class::code(ostream &s, Scope& scope) {
 
 }
 
-void isvoid_class::code(ostream &s, Scope& scope) {
+void isvoid_class::code(ostream &s, Scope scope) {
   // Avalia e1
   this->e1->code(s, scope);
   // Salva o resultado de e1 em T1
@@ -1809,12 +1809,12 @@ void isvoid_class::code(ostream &s, Scope& scope) {
   emit_label_def(labelExit, s);
 }
 
-void no_expr_class::code(ostream &s, Scope& scope) {
+void no_expr_class::code(ostream &s, Scope scope) {
   // Retorna zero para no_expr
   emit_move(ACC, ZERO, s);
 }
 
-void object_class::code(ostream &s, Scope& scope) {
+void object_class::code(ostream &s, Scope scope) {
   // Verifica se o objeto existe no escopo e qual o seu tipo
   // (variável, atributo ou parâmetro)
   int index = scope.lookUpVariable(this->name);
