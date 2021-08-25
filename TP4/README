@@ -170,6 +170,8 @@ Criada classe Scope para tratar do estado. O que pôde ser implementado no .h fo
 ou métodos do cgen.cc foi implementado nele.
 
 
+TAGS em ordem decrescente
+
 labelId mantém um id unico para definir labels distintas
 
 Foi decidido que em casos de erros (que não deveria acontecer, já que existe uma analisador semântico antes) nosso código gera um string "ERRO" no assembly,
