@@ -1243,7 +1243,6 @@ int Scope::lookUpAttribute(Symbol symbol) {
   // Procura por um atributo da classe na pilha
   std::map<Symbol, int> attributesMap = offsetClassAttr[this->classNode->get_name()];
   if(attributesMap.find(symbol) != attributesMap.end()) {
-    std::cout << this->classNode->get_name() << "::" << symbol << " tem offset " << attributesMap[symbol] << endl;
     return attributesMap[symbol];
   }
   return -1;
@@ -1295,7 +1294,6 @@ void pushParametersInStack(Expressions actuals, Scope& scope, ostream& s) {
     // Avalia o parâmetro
     expression->code(s, scope);
     // Coloca seu resultado na pilha
-    s << "#PAAAAARAMETRO" << endl;
     emit_push(ACC, s);
     scope.addDullElement();
   }

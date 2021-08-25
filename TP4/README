@@ -178,3 +178,9 @@ que deverá gerar erros ao executar o código gerado.
 Alteramos o segundo parametro do emit_load_address para receber um const char * ao invés de char*
 
 Os calees fazem o pop dos argumentos
+
+teste 1 testa se a string lida é palindroma
+teste 2 testa várias operações e deve dar output de -301
+teste 3 testa um dispatch void
+teste 4 testa um case em um objeto void
+teste 5 testa um case sem match
