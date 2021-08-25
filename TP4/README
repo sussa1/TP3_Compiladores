@@ -1,188 +1,50 @@
-                    Arquivo README para o Trabalho Prático 4
-================================================================================
+Vitor Rodarte Ricoy - 2019007112
+Vitor Assunção Rabello de Oliveira - 2019007104
 
-Estrutura
----------
+As decisões que tomamos foram:
 
-  Considere que <cool dir> corresponde ao caminho onde está a pasta "cool" que
-  você extraiu do arquivo "tp3-4.tar.gz". Após executar o comando
+- Colocamos comentários em portugues, mas o código e debug estão em ingles.
 
-  > make -f <cool dir>/assignments/cgen/Makefile
+- Delegamos a geração de código para os CgenNodes, fazendo o CgenClassTable chamar métodos do CgenNodes.
 
-  seu diretório deve conter os seguintes arquivos (-> corresponde a links
-  simbólicos):
+- Salvamos todos os offsets em maps, sendo os maps criados:
+  - offsetClassAttr que salva o offset e símbolo dos atributos das classes
+  - methodOffsetClassMethod que salva o offset, símbolo e nó da classe dos métodos das classes
+  - classNodeMap que salva o nó de uma classe de acordo com seu símbolo
 
-  Makefile              -> [course dir]/assignments/PA5/Makefile
-  README
-  ast-lex.cc            -> [course dir]/src/PA5/ast-lex.cc
-  ast-parse.cc          -> [course dir]/src/PA5/ast-parse.cc
-  cgen-phase.cc         -> [course dir]/src/PA5/cgen-phase.cc
-  cgen.cc
-  cgen.h
-  cgen_supp.cc
-  cool-tree.cc          -> [course dir]/src/PA5/cool-tree.cc
-  cool-tree.handcode.h
-  dumptype.cc           -> [course dir]/src/PA5/dumptype.cc
-  emit.h
-  example.cl
-  handle_flags.cc       -> [course dir]/src/PA5/handle_flags.cc
-  mycoolc               -> [course dir]/src/PA5/mycoolc*
-  stringtab.cc          -> [course dir]/src/PA5/stringtab.cc
-  tree.cc               -> [course dir]/src/PA5/tree.cc
-  utilities.cc          -> [course dir]/src/PA5/utilities.cc
-  *.d
+- Criamos dois maps para guardar informações das tags: classesByTags, que salva o nó da classe de uma tag; e tagByClass,
+que salva a tag de uma dada classe.
 
-  Os arquivos de cabeçalho (.h) para este trabalho podem ser encontrados em
-  [cool dir]/include/cgen.
+- As tags são definidas antes da geração de código, e essa definição que salva a tag escolhida para Bool, Int e String.
+As tags são escolhidas de forma decrescente, ou seja, as classes filhas têm tags menores que as classes pais.
 
-  O Makefile contém ações para compilar e executar seu programa.
-  NÃO MODIFIQUE.
+- Foi criado um método code_classPrototypeTable para gerar uma tabela que indexa de acordo com a tag o endereço do prototype e do init da classe 
+que possui a tag. Essa tabela é necessária para implementar o new do SELF_TYPE, já que devemos encontrar o init e prototype do self.
 
-  O README (este arquivo) contém algumas instruções. Além disso, você encontrará
-  ao final do arquivo um espaço para que você preencha a documentação a ser
-  entregue. Você deve explicar as decisões de projeto, explicar por que seu
-  programa está correto e por que seus casos de teste são adequados. Ao final,
-  antes de gerar o arquivo de submissão, apague todo o conteúdo do arquivo README
-  que não faz parte da sua documentação (i.e. as instruções aqui presentes, acima
-  dos dizeres "corte aqui"),
-
-  Em example.cl você deve escrever um código Cool que esteja correto, de forma
-  a testar a maior quantidade possível de aspectos do gerador de código. E, ao
-  rodar o emulador spim com o código gerado, o programa deve executar
-  corretamente.
-
-  cgen.cc contém o esqueleto do gerador de código. Este arquivo fornece três
-  componentes do gerador:
-
-    - Funções para produzir o grafo de herança;
-
-    - Funções para emitir dados globais e constantes; e
-
-    - Funções para emitir instruções MIPS.
-
-  Você deve dar uma olhada e entender esse código; ele irá ajudá-lo a completar
-  o restante do gerador de código.
-
-
-  cgen.h é o cabeçalho do gerador de código. Fique a vontade para dicionar o
-  que achar necessário.
-
-  cgen_supp.cc é um código que serve de suporte para o gerador. Você pode
-  adicionar funções como desejar, mas NÃO MODIFIQUE as 3 funções a seguir:
-
-    - byte_mode;
-    - ascii_mode; e
-    - emit_string_constant
-
-  emit.h define uma série de macros que você pode achar úteis quando quiser
-  emitir código. Fique a vontade para modificar conforme julgar necessário.
-
-  cgen-phase.cc é o driver para o compilador. NÃO MODIFIQUE.
-
-  O script mycoolc pode passar qualquer uma das opções padrões para o gerador
-  de código; para este trabalho, para debugar o gerador de código utilize a
-  opção -c para setar a variável cgen_debug como verdadeira. Após isso, para
-  gerar alguma informação de debug útil você vai ter que implementar o código
-  de debug; para tanto, escreva-o seguindo o formato a seguir:
-
-    if (cgen_debug) {
-      ...
-    }
-
-  symtab.h contém a implementação da tabela de símbolos. Você pode modificar
-  este arquivo se desejar. Para tanto, copie o arquivo <course
-  dir>/include/cgen/symtab.h para seu diretório local.
-
-  cool.h contém definições usadas por praticamente todas as partes do
-  compilador. NÃO MODIFIQUE.
-
-  tree.h contém a classe base 'tree_node' da AST.
-
-  cool-tree.cc, cool-tree.h e cool-tree.handcode.h contém as declarações e
-  definições de geração de código da AST. Você pode adicionar campos como
-  quiser, mas NÃO MODIFIQUE nenhum método que já existe, excepto pelo método
-  'code' que você pode modificar ou remover conforme desejar. Você pode
-  modificar cool-tree.h ou cool-tree.handcode.h, mas NÃO MODIFIQUE
-  cool-tree.cc; adicionoar todas as definições de método ao arquivo cgen.cc.
-
-  stringtab.h contém funções para manipulação da tabela de strings.
-  NÃO MODIFIQUE.
-
-  dumptype.cc contém funções para imprimir a AST. NÃO MODIFIQUE.
-
-  *.d são arquivos de dependência, gerados automaticamente pelo Makefile.
-
-Instruções
-----------
-
-  Para compilar seu gerador de código, execute o seguinte comando:
-
-  > make cgen
-
-  Para testar o compilador, execute o seguinte comando:
-
-  > ./mycool.c [-o nome do arquivo de saída] <file1.cl> <file2.cl> ...
-
-  Este comando faz o parse de todos os arquivos passados por linha de comando,
-  os passa para o analisador semântico e depois roda seu gerador de código em
-  cima da AST gerada.
-
-  Para rodar seu compilador no arquivo example.cl, execute o seguinte comando:
-
-  > make dotest
-
-  Para executar o código gerado:
-
-  > ./spim -file foo.s
-
-  Para entregar seu trabalho, primeiro certifique-se que está tudo funcionando
-  e que você preencheu o arquivo README corretamente. Em seguida, dentro do
-  diretório do projeto, execute o seguinte comando, passando todos os arquivos
-  modificados (incluindo este README, com sua documentação):
-
-  > tar -czvf tp3_seuNOME.tar.gz <arquivo1> <arquivo2> ...
-
-  BOA SORTE!
-
-------8<------8<------8<------8<---corte arqui---8<------8<------8<------8<-----
-
-[Aqui começa sua documentação]
-
-Colocamos comentários em portugues, mas o código e debug estão em ingles.
-
-Delegou a geração de código para os CgenNodes, fazendo o CgenClassTable chamar
-métodos do CgenNodes.
-
-
-Falando dos offsets:
-std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassAttr; Define offset e tipo dos atributos das classes
-std::map<Symbol, std::map<Symbol, std::pair<Symbol, int> > > typeOffsetClassMethod; Define offset e retorno dos métodos das classes
-std::map<Symbol, CgenNode*> classNodeMap; Salva o Nó de uma classe de acordo com seu símbolo, usado para atualizar currentNode ao chamar
-métodos de outras classes
-
-
-Foi criado um método code_classPrototypeTable para gerar uma tabela que indexa de acordo com a tag o endereço do prototype da classe que
-possui a tag. Para ajudar nisso, foi criada um map classesByTag que mapeia uma tag para um CgenNode*. Essa tabela é necessária para implementar
-o new do SELF_TYPE
-
-Falando do estado:
-Criada classe Scope para tratar do estado. O que pôde ser implementado no .h foi implementado lá por simplicidade. O que precisava de variáveis
+- Criamos a classe Scope para lidar com o estado. O que pôde ser implementado no .h foi implementado lá por simplicidade. O que precisava de variáveis
 ou métodos do cgen.cc foi implementado nele.
 
+- Na geração de código das expressões criamos uma variável labelId que mantém um id único para que possamos definir labels distintas.
 
-TAGS em ordem decrescente
+- Foi decidido que em casos de erros (que não deveriam acontecer, já que existe uma analisador semântico que é executado antes) nosso código gera um 
+string "ERRO" no assembly, que deverá gerar erros ao executar o código gerado.
 
-labelId mantém um id unico para definir labels distintas
+- Alteramos, de acordo com a nossa necessidade, os parâmetros dos emits para receber um const char * ao invés de char*.
 
-Foi decidido que em casos de erros (que não deveria acontecer, já que existe uma analisador semântico antes) nosso código gera um string "ERRO" no assembly,
-que deverá gerar erros ao executar o código gerado.
+- O próprio método é responsável por fazer o pop dos seus argumentos, enquanto o dispatch faz o push.
 
-Alteramos o segundo parametro do emit_load_address para receber um const char * ao invés de char*
+Já sobre os testes, criamos seis testes distintos, que estão na pasta testes:
 
-Os calees fazem o pop dos argumentos
+- t1.cl testa se a string lida é palindroma.
+- t2.cl testa várias operações e deve dar output de -301.
+- t3.cl testa um dispatch void.
+- t4.cl testa um case em um objeto void.
+- t5.cl testa um case sem match.
+- t6.cl verifica algumas operações aritméticas e se o case funciona para uma classe pai e se prefere a classe filha à classe pai.
 
-teste 1 testa se a string lida é palindroma
-teste 2 testa várias operações e deve dar output de -301
-teste 3 testa um dispatch void
-teste 4 testa um case em um objeto void
-teste 5 testa um case sem match
+O arquivo de teste t2.cl foi escolhido para representar um teste mais completo, sendo copiado para o arquivo example.cl. Também testamos esses arquivos
+com a opção do garbage collector, e tudo indica que ele está funcionando corretamente.
+
+Por fim, acreditamos que nosso programa está correto, pois durante a construção do gerador de código as operações realizados por nós fizeram sentido, 
+portanto a implementação pareceu correta. Além disso, testamos o nosso gerador de código com o gerador fornecido, que está correto, e os resultados 
+foram iguais. Finalmente, usamos o parser fornecido, e não o parser construído por nós no TP3, logo caso o TP3 esteja errado, esse TP não é afetado.
