@@ -881,6 +881,17 @@ std::vector<CgenNode*> CgenClassTable::getClassNodes() {
   return classNodes;
 }
 
+std::vector<CgenNode*> CgenNode::getClassChildren() {
+  auto nodeList = this->children;
+  std::vector<CgenNode*> classChildren;
+  // Salva os nós filhos da classe
+  for(List<CgenNode>* list = nodeList; list != nullptr; list = list->tl()) {
+    CgenNode* node = list->hd();
+    classChildren.push_back(node);
+  }
+  return classNodes;
+}
+
 void CgenClassTable::code_classPrototypeTable() {
   str << "classPrototypeTable" << LABEL;
   auto classes = this->getClassNodes();
@@ -1407,12 +1418,7 @@ std::set<int> searchChildrenTags(std::set<int> tags) {
   // Busca os filhos da classe
   for(int tag : tags) { 
       CgenNode* nodeTag = classesByTag[tag];
-      std::vector<CgenNode*> childrenNode;
-      auto nodeList = nodeTag->get_children();
-      for(auto it = nodeList->hd(); it != nullptr; nodeList = nodeList->tl()) {
-        CgenNode* node = (CgenNode*) it;
-        childrenNode.push_back(node);
-      }
+      std::vector<CgenNode*> childrenNode = nodeTag -> getClassChildren();
       for(CgenNode* childNode : childrenNode) {
           int childTag = tagByClass[childNode->get_name()];
           tagsChildren.insert(childTag);
@@ -1484,7 +1490,8 @@ void typcase_class::code(ostream &s, Scope scope) {
   // Percorre os cases adicionando a definição do label de cada um
   int indexCase = 0;
   for(branch_class* caseBranch : cases) {
-      emit_label_def(labelBegin + indexCase++, s);
+      emit_label_def(labelBegin + indexCase, s);
+      indexCase++;
       scope.newScope();
       scope.addVariable(caseBranch->name);
       emit_push(ACC, s);

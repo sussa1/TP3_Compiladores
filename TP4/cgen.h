@@ -138,6 +138,8 @@ public:
    CgenNodeP get_parentnd() { return parentnd; }
    int basic() { return (basic_status == Basic); }
    
+   std::vector<CgenNode*> getClassChildren();
+
    // Métodos auxiliaries para a emissão de código
    // de constantes e declarações globais
    void code_prototypeObject(ostream& str, int tag, int size);
