@@ -1404,12 +1404,13 @@ void loop_class::code(ostream &s, Scope scope) {
 // Busca as tags dos filhos de uma classe
 std::set<int> searchChildrenTags(std::set<int> tags) {
   std::set<int> tagsChildren;
-  for(int tag : tags) { // find children of this class.
+  // Busca os filhos da classe
+  for(int tag : tags) { 
       CgenNode* nodeTag = classesByTag[tag];
       std::vector<CgenNode*> childrenNode;
-      for(int it = nodeTag->get_children()->first(); nodeTag->get_children()->more(it); it = nodeTag->get_children()->next(it)) {
-        auto nodeObj = nodeTag->get_children()->nth(it);
-        CgenNode* node = (CgenNode*) nodeObj;
+      auto nodeList = nodeTag->get_children();
+      for(auto it = nodeList->hd(); it != nullptr; nodeList = nodeList->tl()) {
+        CgenNode* node = (CgenNode*) it;
         childrenNode.push_back(node);
       }
       for(CgenNode* childNode : childrenNode) {
@@ -1465,7 +1466,7 @@ void typcase_class::code(ostream &s, Scope scope) {
   while(!checkIfIsEmpty(casesTags)) {
       // Gera a verificação para a classe da tag atual e a manda para o label correto
       for(int ind = 0; ind < casesTags.size(); ind++) {
-          std::vector<int> caseTags = casesTags[ind];
+          std::set<int> caseTags = casesTags[ind];
           for (int caseTag : caseTags) {
               emit_load_imm(T2, caseTag, s);
               emit_beq(T1, T2, labelBegin + ind, s);
@@ -1485,7 +1486,7 @@ void typcase_class::code(ostream &s, Scope scope) {
   for(branch_class* caseBranch : cases) {
       emit_label_def(labelBegin + indexCase++, s);
       scope.newScope();
-      scope.addVariable(caseBranch->get_name());
+      scope.addVariable(caseBranch->name);
       emit_push(ACC, s);
       caseBranch->expr->code(s, scope);
       emit_addiu(SP, SP, 4, s);
