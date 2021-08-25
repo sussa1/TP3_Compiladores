@@ -7,7 +7,7 @@ class Filha inherits Pai {
 };
 
 class Main inherits IO {
-    Filha attr <- new Filha;
+    attr : Filha <- new Filha;
 
     main() : Object {
         {
