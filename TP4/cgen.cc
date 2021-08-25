@@ -1484,8 +1484,7 @@ void typcase_class::code(ostream &s, Scope scope) {
       }
   }
   // Se passar aqui, não executou nenhum beq, logo não teve match
-  // Coloca o tipo da expressão em T1
-  emit_move(ACC, T1, s);
+  // ACC já contém o resultado da expressão
   emit_jal("_case_abort", s);
   emit_branch(labelEnd, s);
   
@@ -1494,10 +1493,12 @@ void typcase_class::code(ostream &s, Scope scope) {
   for(branch_class* caseBranch : cases) {
       emit_label_def(labelBegin + indexCase, s);
       indexCase++;
+      // Adiciona a variável do case no escopo
       scope.newScope();
       scope.addVariable(caseBranch->name);
       emit_push(ACC, s);
       caseBranch->expr->code(s, scope);
+      // Remove a variável do case do escopo
       emit_addiu(SP, SP, 4, s);
       emit_branch(labelEnd, s);
   }
