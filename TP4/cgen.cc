@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <map>
 #include <vector>
+#include <set>
 
 extern void emit_string_constant(ostream& str, char *s);
 extern int cgen_debug;
