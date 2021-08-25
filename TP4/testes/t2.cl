@@ -15,6 +15,7 @@ class TesteExpression inherits ClasseMae {
         {       
             let lixo: Int, lixoTeste: TesteExpression, lixoBool: Bool, calc: Int in {
                 foo <- self.valorInteiro(foo, dummy);
+                irmao <- new TesteExpression;
                 dummy <- irmao @ ClasseMae . valorInteiro(foo, dummy);
                 foo <- irmao.valorInteiro(foo, dummy);
                 lixo <- valorInteiro(foo, dummy);
