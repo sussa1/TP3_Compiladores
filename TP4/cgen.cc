@@ -1164,8 +1164,7 @@ void CgenNode::code_prototypeObject(ostream& str, int tag, int size) {
   str << WORD <<  DEFAULT_OBJFIELDS + size << endl;
   // Adiciona o ponteiro para a tabela de dispatch
   str << WORD << this->get_name() << DISPTAB_SUFFIX << endl;
-  // Adiciona os atributos, com offset inicial igual a 3, pois já existem outros
-  // 3 campos de objetos padrões
+  // Adiciona os atributos
   int offset = 0;
   this->code_attributesPrototypeObject(str, offset);
 }
