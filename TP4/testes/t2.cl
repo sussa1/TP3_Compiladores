@@ -13,7 +13,7 @@ class TesteExpression inherits ClasseMae {
     };
     testeTodasExpr(foo: Int, dummy: Int) : Bool {
         {       
-            let lixo: Int, calc: Int in {
+            let lixo: Int, lixoTeste: TesteExpression, lixoBool: Bool, calc: Int in {
                 foo <- self.valorInteiro(foo, dummy);
                 dummy <- irmao @ ClasseMae . valorInteiro(foo, dummy);
                 foo <- irmao.valorInteiro(foo, dummy);
@@ -23,17 +23,17 @@ class TesteExpression inherits ClasseMae {
                     while 0 <= cont LOOP cont <- cont-1 POOL;
                     calc <- cont;
                 };
-                lixo <- new TesteExpression;
-                lixo <- isvoid lixo;
+                lixoTeste <- new TesteExpression;
+                lixoBool <- isvoid lixo;
                 lixo <- lixo + foo;
                 lixo <- lixo - foo;
                 lixo <- lixo * foo;
                 lixo <- lixo / foo;
                 lixo <- ~lixo;
-                lixo <- lixo < foo*2;
-                lixo <- lixo-1 <= foo;
-                lixo <- lixo = foo;
-                lixo <- NOT lixo = foo;
+                lixoBool <- lixo < foo*2;
+                lixoBool <- lixo-1 <= foo;
+                lixoBool <- lixo = foo;
+                lixoBool <- NOT lixo = foo;
                 lixo <- (lixo + foo) * (lixo + foo);
                 lixo <- 10;
                 lixo;
@@ -42,7 +42,16 @@ class TesteExpression inherits ClasseMae {
                     calcString : String => calcString.concat("Result");
                     calcBool : Bool => NOT calcBool;
                 esac;
-            }
+            };
         }
     };
 };
+
+class Main inherits IO {
+    main() : SELF_TYPE {
+        let teste : TesteExpression in {
+            teste <- new TesteExpression;
+            out_string(teste.testeTodasExpr(1, 100));
+        }
+    };
+}
