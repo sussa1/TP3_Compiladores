@@ -11,7 +11,7 @@ class TesteExpression inherits ClasseMae {
     valorInteiro(foo : Int, dummy : Int) : Int {
         foo*10
     };
-    testeTodasExpr(foo: Int, dummy: Int) : Bool {
+    testeTodasExpr(foo: Int, dummy: Int) : Object {
         {       
             let lixo: Int, lixoTeste: TesteExpression, lixoBool: Bool, calc: Int in {
                 foo <- self.valorInteiro(foo, dummy);
@@ -38,7 +38,7 @@ class TesteExpression inherits ClasseMae {
                 lixo <- 10;
                 lixo;
                 case calc OF
-                    calcInt : Int => calcInt-10;
+                    calcInt : Int => calcInt-foo-dummy;
                     calcString : String => calcString.concat("Result");
                     calcBool : Bool => NOT calcBool;
                 esac;
@@ -51,7 +51,7 @@ class Main inherits IO {
     main() : SELF_TYPE {
         let teste : TesteExpression in {
             teste <- new TesteExpression;
-            out_string(teste.testeTodasExpr(1, 100));
+            out_int(teste.testeTodasExpr(1, 100));
         }
     };
-}
+};
