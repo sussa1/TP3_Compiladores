@@ -889,7 +889,7 @@ std::vector<CgenNode*> CgenNode::getClassChildren() {
     CgenNode* node = list->hd();
     classChildren.push_back(node);
   }
-  return classNodes;
+  return classChildren;
 }
 
 void CgenClassTable::code_classPrototypeTable() {
@@ -1484,6 +1484,7 @@ void typcase_class::code(ostream &s, Scope scope) {
       }
   }
   // Se passar aqui, não executou nenhum beq, logo não teve match
+  // Coloca o tipo da expressão em T1
   emit_move(ACC, T1, s);
   emit_jal("_case_abort", s);
   emit_branch(labelEnd, s);
