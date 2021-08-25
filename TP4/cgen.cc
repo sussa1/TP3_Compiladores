@@ -1400,52 +1400,94 @@ void loop_class::code(ostream &s, Scope scope) {
   emit_move(ACC, ZERO, s);
 }
 
+// Busca as tags dos filhos de uma classe
+std::set<int> searchChildrenTags(std::set<int> tags) {
+  std::set<int> tagsChildren;
+  for (int tag : tags) { // find children of this class.
+      CgenNode* nodeTag = classesByTag[tag];
+      std::vector<CgenNode*> childrenNode = nodeTag->GetChildren();
+      for (CgenNode* childNode : childrenNode) {
+          int childTag = tagByClass[childNode->get_name()];
+          tagsChildren.insert(childTag);
+      }
+  }
+  return tagsChildren;
+}
+
+bool checkIfIsEmpty(std::vector<std::set<int> > container) {
+  for(std::set<int> s : container) {
+    if(!s.empty()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 void typcase_class::code(ostream &s, Scope scope) {
+  std::map<Symbol, int> _class_tags = codegen_classtable->GetClassTags();
+  std::vector<CgenNode*> _class_nodes = codegen_classtable->GetClassNodes();
   // Avalia a expressão do case
-  this->expr->code(s, scope);
-  int labelExprValida = labelId++;
-  // Se a expressão do case for void, aborta chamando o procedimento correto
-  emit_bne(ACC, ZERO, labelExprValida, s);
-  // Carrega o nome do arquivo no a0
+  expr->code(s, env);
+  // Verifica se a expressão é void
+  emit_bne(ACC, ZERO, labelId, s);
   emit_load_address(ACC, "str_const0", s);
-  // Carrega a linha no registrador t1
   emit_load_imm(T1, this->line_number, s);
-  // Chama o procedimento para abortar
   emit_jal("_case_abort2", s);
-  // Define a label da expressão válida
-  emit_label_def(labelExprValida, s);
-  // Carrega o objeto em T1
+  emit_label_def(labelId++, s);
+  // Carrega em T1 o tipo da expressão
   emit_load(T1, 0, ACC, s);
-  // Código para checar os cases
-  std::vector<std::pair<int, branch_class*> > labelsMatches;
+  // Código para percorrer os cases e salvá-los
+  std::vector<branch_class*> cases = GetCases();
   for (int it = this->cases->first(); this->cases->more(it); it = this->cases->next(it)) {
     auto caseObj = this->cases->nth(it);
     branch_class* branch = (branch_class*) caseObj;
-    // Faz o match da expressão com o tipo do case
-    // Carrega em T2 a tag da classe desse match
-    std::string className = branch->type_decl->get_string();
-    className += PROTOBJ_SUFFIX;
-    emit_load_address(T2, className.c_str(), s);
-    // Se as tags do match e da expressão forem iguais, vai para o trecho
-    // que executa o código do match
-    emit_beq(T1, T2, labelId, s);
-    labelsMatches.push_back({labelId++, branch});
+    cases.push_back(branch);
   }
-  // Executa o procedimento para abortar o case caso não tenha match
-  // Nesse caso o ACC já contém o tipo da expressão do case
+  // Define as labels que serão usadas
+  int labelEnd = labelId + cases.size();
+  int labelBegin = labelId;
+  labelId += cases.size() + 1;
+
+  // Gera as tags dos cases base
+  std::vector<std::set<int> > casesTags;
+  for (branch_class* caseBranch : cases) {
+      Symbol typeDeclared = caseBranch->type_decl;
+      int classTag = tagByClass[typeDeclared];
+      std::set<int> caseTags = { classTag };
+      casesTags.push_back(caseTags);
+  }
+  // Salva as tags dos filhos dos cases base
+  // Vai gerando as tags dos filhos até não conseguir mais
+  while(!checkIfIsEmpty(casesTags)) {
+      // Gera a verificação para a classe da tag atual e a manda para o label correto
+      for (int ind = 0; ind < casesTags.size(); ind++) {
+          std::vector<int> caseTags = casesTags[ind];
+          for (int caseTag : caseTags) {
+              emit_load_imm(T2, caseTag, s);
+              emit_beq(T1, T2, labelBegin + ind, s);
+          }
+      }
+      // Salva as tags dos filhos da classe
+      for (int ind = 0; ind < casesTags.size(); ind++) {
+          casesTags[ind] = searchChildrenTags(casesTags[ind]);
+      }
+  }
+  // Se passar aqui, não executou nenhum beq, logo não teve match
   emit_jal("_case_abort", s);
-  for(auto labelMatch : labelsMatches) {
-    emit_label_def(labelMatch.first, s);
-    // Cria um novo escopo
-    scope.newScope();
-    // Coloca a variável do match no novo escopo, sendo uma cópia do resultado
-    // da expressão do case
-    scope.addVariable(labelMatch.second->name);
-    emit_push(ACC, s);
-    labelMatch.second->expr->code(s, scope);
-    // Dá pop da nova variável
-    emit_addiu(SP, SP, 4, s);
+  emit_branch(labelEnd, s);
+  
+  // Percorre os cases adicionando a definição do label de cada um
+  int indexCase = 0;
+  for (branch_class* caseBranch : cases) {
+      emit_label_def(labelBegin + indexCase++, s);
+      scope.newScope();
+      scope.addVariable(caseBranch->get_name());
+      emit_push(ACC, s);
+      caseBranch->expr->code(s, scope);
+      emit_addiu(SP, SP, 4, s);
+      emit_branch(labelEnd, s);
   }
+  emit_label_def(labelEnd, s);
 }
 
 void block_class::code(ostream &s, Scope scope) {
