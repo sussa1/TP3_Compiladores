@@ -950,7 +950,7 @@ void CgenNode::code_classMethods(ostream& str) {
     // Salva a0 no self
     emit_move(SELF, ACC, str);
 
-    // Coloca os parâmetros na pilha
+    // Coloca os parâmetros no escopo
 
     Scope scope;
     scope.classNode = this;
@@ -1244,6 +1244,7 @@ int Scope::lookUpAttribute(Symbol symbol) {
   // Procura por um atributo da classe na pilha
   std::map<Symbol, int> attributesMap = offsetClassAttr[this->classNode->get_name()];
   if(attributesMap.find(symbol) != attributesMap.end()) {
+    std::cout << this->classNode->get_name() << "::" << symbol << " tem offset " << attributesMap[symbol] << endl;
     return attributesMap[symbol];
   }
   return -1;

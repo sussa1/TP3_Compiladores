@@ -108,9 +108,8 @@ public:
    }
 
    // Adiciona um novo parâmetro
-   int addParameter(Symbol symbol) {
+   void addParameter(Symbol symbol) {
       parameterTable.push_back(symbol);
-      return parameterTable.size() - 1;
    }
 
    std::vector<int> scopeSize;
