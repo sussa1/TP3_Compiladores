@@ -1431,7 +1431,9 @@ void typcase_class::code(ostream &s, Scope scope) {
     emit_beq(T1, T2, labelId, s);
     labelsMatches.push_back({labelId++, branch});
   }
-  int labelEndCaseWithMatch = labelId++;
+  // Executa o procedimento para abortar o case caso não tenha match
+  // Nesse caso o ACC já contém o tipo da expressão do case
+  emit_jal("_case_abort", s);
   for(auto labelMatch : labelsMatches) {
     emit_label_def(labelMatch.first, s);
     // Cria um novo escopo
@@ -1443,15 +1445,7 @@ void typcase_class::code(ostream &s, Scope scope) {
     labelMatch.second->expr->code(s, scope);
     // Dá pop da nova variável
     emit_addiu(SP, SP, 4, s);
-    // Sai do escopo com a nova variável
-    // scope.exitScope();
-    emit_branch(labelEndCaseWithMatch, s);
   }
-  // Executa o procedimento para abortar o case caso não tenha match
-  // Nesse caso o ACC já contém o tipo da expressão do case
-  emit_jal("_case_abort", s);
-  // Define a label que identifica um case que finalizou corretamente
-  emit_label_def(labelEndCaseWithMatch, s);
 }
 
 void block_class::code(ostream &s, Scope scope) {
