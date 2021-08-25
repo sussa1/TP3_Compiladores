@@ -163,7 +163,7 @@ void program_class::cgen(ostream &os)
 //
 //////////////////////////////////////////////////////////////////////////////
 
-static void emit_load(char *dest_reg, int offset, char *source_reg, ostream& s)
+static void emit_load(char *dest_reg, int offset, const char *source_reg, ostream& s)
 {
   s << LW << dest_reg << " " << offset * WORD_SIZE << "(" << source_reg << ")" 
     << endl;
@@ -1844,7 +1844,7 @@ void object_class::code(ostream &s, Scope scope) {
       }
     } else {
       // Símbolo é parâmetro ou atributo
-      emit_load(ACC, index+3, (attribute?SELF:FP), s);
+      emit_load(ACC, index+3,(attribute?SELF:FP), s);
       if(cgen_Memmgr == 1) {
         emit_addiu(A1, (attribute?SELF:FP), WORD_SIZE*(index+3), s);
         emit_jal("_GenGC_Assign", s);
