@@ -1425,8 +1425,6 @@ bool checkIfIsEmpty(std::vector<std::set<int> > container) {
 }
 
 void typcase_class::code(ostream &s, Scope scope) {
-  std::map<Symbol, int> _class_tags = codegen_classtable->GetClassTags();
-  std::vector<CgenNode*> _class_nodes = codegen_classtable->GetClassNodes();
   // Avalia a expressão do case
   expr->code(s, scope);
   // Verifica se a expressão é void
@@ -1438,7 +1436,7 @@ void typcase_class::code(ostream &s, Scope scope) {
   // Carrega em T1 o tipo da expressão
   emit_load(T1, 0, ACC, s);
   // Código para percorrer os cases e salvá-los
-  std::vector<branch_class*> cases = GetCases();
+  std::vector<branch_class*> cases;
   for (int it = this->cases->first(); this->cases->more(it); it = this->cases->next(it)) {
     auto caseObj = this->cases->nth(it);
     branch_class* branch = (branch_class*) caseObj;
