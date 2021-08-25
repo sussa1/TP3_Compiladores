@@ -1420,7 +1420,7 @@ void typcase_class::code(ostream &s, Scope scope) {
     branch_class* branch = (branch_class*) caseObj;
     // Faz o match da expressão com o tipo do case
     // Carrega em T2 a tag da classe desse match
-    emit_load_address(T2, branch->type_decl->get_string(), s);
+    emit_load_address(T2, branch->type_decl->get_string()+PROTOBJ_SUFFIX, s);
     // Se as tags do match e da expressão forem iguais, vai para o trecho
     // que executa o código do match
     emit_beq(T1, T2, labelId, s);
