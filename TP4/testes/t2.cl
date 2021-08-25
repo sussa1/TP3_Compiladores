@@ -49,9 +49,13 @@ class TesteExpression inherits ClasseMae {
 
 class Main inherits IO {
     main() : SELF_TYPE {
-        let teste : TesteExpression in {
+        let teste : TesteExpression, retorno : Object in {
             teste <- new TesteExpression;
-            out_int(teste.testeTodasExpr(1, 100));
+            retorno <- teste.testeTodasExpr(1, 100);
+            case retorno of
+                retInt : Int => out_int(retInt);
+                retString: String => out_string(retString);
+            esac;
         }
     };
 };
