@@ -1131,10 +1131,10 @@ int CgenNode::getSize() {
 
 void CgenClassTable::generateClassTags() {
   auto nodes = getClassNodes();
-  int counterTag = 0;
+  int counterTag = nodes.size()-1;
   // Salva a tag de cada classe
   for(CgenNode* node : nodes) {
-    int tag = counterTag++;
+    int tag = counterTag--;
     classesByTag[tag] = node;
     tagByClass[node->get_name()] = tag;
   }
