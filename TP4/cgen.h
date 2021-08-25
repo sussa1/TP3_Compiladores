@@ -25,7 +25,7 @@ private:
    int intclasstag;
    int boolclasstag;
 
-   void CgenClassTable::generateClassTags();
+   void generateClassTags();
 // The following methods emit code for
 // constants and global declarations.
 

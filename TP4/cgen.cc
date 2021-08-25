@@ -1120,7 +1120,7 @@ void CgenClassTable::generateClassTags() {
   for(CgenNode* node : nodes) {
     int tag = counterTag++;
     classesByTag[tag] = node;
-    tagByClass[node->get_name] = tag;
+    tagByClass[node->get_name()] = tag;
   }
 }
 
@@ -1291,6 +1291,7 @@ void pushParametersInStack(Expressions actuals, Scope& scope, ostream& s) {
     // Avalia o parâmetro
     expression->code(s, scope);
     // Coloca seu resultado na pilha
+    s << "#PAAAAARAMETRO" << endl;
     emit_push(ACC, s);
     scope.addDullElement();
   }
