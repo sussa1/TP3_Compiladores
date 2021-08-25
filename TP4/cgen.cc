@@ -35,6 +35,7 @@ std::map<Symbol, std::map<Symbol, int > > offsetClassAttr;
 std::map<Symbol, std::map<Symbol, std::pair<method_class*, std::pair<int, Symbol> > > > methodOffsetClassMethod;
 std::map<Symbol, CgenNode*> classNodeMap;
 std::map<int, CgenNode*> classesByTag;
+std::map<CgenNode*, int> tagByClass;
 
 //
 // Three symbols from the semantic analyzer (semant.cc) are used.
@@ -880,9 +881,14 @@ void CgenClassTable::code_classPrototypeTable() {
   auto classes = this->getClassNodes();
   // Cria a tabela sendo que para cada classe temos duas entradas
   // A primeira indica o prototype e a segunda indica o init
+  std::vector<std::pair<int, std::string> > classesTagNode;
   for(auto classNode : classes) {
-    str << WORD << classNode->get_name() << PROTOBJ_SUFFIX << endl;
-    str << WORD << classNode->get_name() << CLASSINIT_SUFFIX << endl;
+    classesTagNode.push_back({tagByClass[classNode], std::string(classNode->get_name())});
+  }
+  std::sort(classesTagNode.begin(), classesTagNode.end());
+  for(auto pairTagName : classesTagNode) {
+    str << WORD << pairTagName.second << PROTOBJ_SUFFIX << endl;
+    str << WORD << pairTagName.second << CLASSINIT_SUFFIX << endl;
   }
 }
 
@@ -1113,6 +1119,7 @@ std::vector<std::pair<CgenNode*, std::pair<int, int> > > CgenClassTable::getClas
       int tag = counterTag++;
       // Salva a classe dada pela tag atual
       classesByTag[tag] = node;
+      tagByClass[node] = tag;
       int size = node->getSize();
       namesTagsSize.push_back({node, {tag, size}});
     } else {
@@ -1121,16 +1128,19 @@ std::vector<std::pair<CgenNode*, std::pair<int, int> > > CgenClassTable::getClas
         namesTagsSize.push_back({node, {3, size}});
         // Salva a classe dada pela tag atual
         classesByTag[3] = node;
+        tagByClass[node] = 3;
       } else if(node->name == Int) {
         int size = node->getSize();
         namesTagsSize.push_back({node, {2, size}});
         // Salva a classe dada pela tag atual
         classesByTag[2] = node;
+        tagByClass[node] = 2;
       } else { // String
         int size = node->getSize();
         namesTagsSize.push_back({node, {1, size}});
         // Salva a classe dada pela tag atual
         classesByTag[1] = node;
+        tagByClass[node] = 1;
       }
     }
   }
@@ -1760,9 +1770,8 @@ void new__class::code(ostream &s, Scope scope) {
         emit_load_address(T1, "classPrototypeTable", s);
         // Salva em T2 a tag da classe self
         emit_load(T2, 0, SELF, s);
-        // Busca a entrada da tabela que possui o prototipo do objeto
-        // Faz T2*2
-        emit_add(T2, T2, T2, s);
+        // Subtrai 1 da tag, pois indexamos de 1
+        emit_sub(T2, T2, 1, s);
         // Faz T2*4
         emit_sll(T2, T2, 2, s);
         // Salva em T3 o endereço da linha da tabela de classes
