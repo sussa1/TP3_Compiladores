@@ -16,8 +16,8 @@ class TesteExpression inherits ClasseMae {
             let lixo: Int, lixoTeste: TesteExpression, lixoBool: Bool, calc: Int in {
                 foo <- self.valorInteiro(foo, dummy);
                 irmao <- new TesteExpression;
-                dummy <- irmao @ ClasseMae . valorInteiro(foo, dummy);
-                foo <- irmao.valorInteiro(foo, dummy);
+                dummy <- irmao.valorInteiro(foo, dummy);
+                foo <- irmao @ ClasseMae . valorInteiro(foo, dummy);
                 lixo <- valorInteiro(foo, dummy);
                 lixo <- if valorInteiro(foo, dummy) = 10 then 1 else 2 fi;
                 let cont: Int <- 10 in {
@@ -57,6 +57,7 @@ class Main inherits IO {
                 retInt : Int => out_int(retInt);
                 retString: String => out_string(retString);
             esac;
+            out_string("\n");
         }
     };
 };
