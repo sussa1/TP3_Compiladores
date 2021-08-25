@@ -1484,6 +1484,7 @@ void typcase_class::code(ostream &s, Scope scope) {
       }
   }
   // Se passar aqui, não executou nenhum beq, logo não teve match
+  emit_move(ACC, T1, s);
   emit_jal("_case_abort", s);
   emit_branch(labelEnd, s);
   
