@@ -1428,7 +1428,7 @@ void typcase_class::code(ostream &s, Scope scope) {
   std::map<Symbol, int> _class_tags = codegen_classtable->GetClassTags();
   std::vector<CgenNode*> _class_nodes = codegen_classtable->GetClassNodes();
   // Avalia a expressão do case
-  expr->code(s, env);
+  expr->code(s, scope);
   // Verifica se a expressão é void
   emit_bne(ACC, ZERO, labelId, s);
   emit_load_address(ACC, "str_const0", s);
