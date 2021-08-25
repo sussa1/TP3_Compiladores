@@ -999,15 +999,19 @@ void CgenNode::code_attributeInitializer(ostream& str) {
         // Carrega o valor padrão da inicialização de cada tipo no a0
         if(attribute->type_decl == Bool) {
           emit_load_bool(ACC, BoolConst(0), str);
+          // Salva o valor carregado na posição correta da memória
+          emit_store(ACC, DEFAULT_OBJFIELDS + offset, SELF, str);
         } else if(attribute->type_decl == Int) {
           IntEntry* zeroEntry = inttable.lookup_string("0");
           emit_load_int(ACC, zeroEntry, str);
+          // Salva o valor carregado na posição correta da memória
+          emit_store(ACC, DEFAULT_OBJFIELDS + offset, SELF, str);
         } else if(attribute->type_decl == Str) {
           StringEntry* emptyEntry = stringtable.lookup_string("");
           emit_load_string(ACC, emptyEntry, str);
+          // Salva o valor carregado na posição correta da memória
+          emit_store(ACC, DEFAULT_OBJFIELDS + offset, SELF, str);
         }
-        // Salva o valor carregado na posição correta da memória
-        emit_store(ACC, DEFAULT_OBJFIELDS + offset, SELF, str);
       } else {
         // O atributo possui inicialização
         Scope scope;
