@@ -16,7 +16,7 @@ As decisões que tomamos foram:
 que salva a tag de uma dada classe.
 
 - As tags são definidas antes da geração de código, e essa definição que salva a tag escolhida para Bool, Int e String.
-As tags são escolhidas de forma decrescente, ou seja, as classes filhas têm tags menores que as classes pais.
+As tags são escolhidas de forma decrescente, ou seja, as classes filhas têm tags maiores que as classes pais.
 
 - Foi criado um método code_classPrototypeTable para gerar uma tabela que indexa de acordo com a tag o endereço do prototype e do init da classe 
 que possui a tag. Essa tabela é necessária para implementar o new do SELF_TYPE, já que devemos encontrar o init e prototype do self.
